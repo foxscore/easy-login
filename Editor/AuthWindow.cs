@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BestHTTP.Cookies;
 using Foxscore.EasyLogin.Hooks;
+using Foxscore.EasyLogin.KeyringManagers;
 using UnityEditor;
 using UnityEditor.PackageManager.UI;
 using UnityEngine;
@@ -14,13 +15,15 @@ namespace Foxscore.EasyLogin
 {
     public class AuthWindow : EditorWindow
     {
-        internal static void ShowAuthWindow(string username = null)
+        internal static void ShowAuthWindow(AccountStruct account = null)
         {
             var window = CreateWindow<AuthWindow>();
-            if (username != null)
+            if (account != null)
             {
                 window._isUsernameReadonly = true;
-                window._username = username;
+                window._username = account.Username;
+                // TODO: User 2FA Token if one is stored
+                // TODO: On logout, checkbox for if we want to keep the 2auth token 
             }
 
             window.titleContent = new GUIContent("VRC Account");
@@ -36,6 +39,8 @@ namespace Foxscore.EasyLogin
         private bool _wereCredentialsOr2AuthInvalid;
         private static State _state = State.EnterCredentials;
         private TwoFactorType _2FaType = TwoFactorType.None;
+        private string _authToken;
+        private bool _closeRequested;
 
         private static string _errorTitle;
         private static string _errorMessage;
@@ -72,18 +77,14 @@ namespace Foxscore.EasyLogin
                 fontSize = 16,
             };
 
-            ApiHook.Unhook();
-            APIUser.Logout();
-        }
-
-        private void OnDisable()
-        {
-            ApiHook.Hook();
+            VRCSdkControlPanel.InitAccount();
         }
 
         private void OnGUI()
         {
-            Debug.Log(_state);
+            if (_closeRequested)
+                Close();
+            
             switch (_state)
             {
                 case State.EnterCredentials:
@@ -103,6 +104,8 @@ namespace Foxscore.EasyLogin
                     EditorGUILayout.LabelField("Password", _labelStyle);
                     EditorGUILayout.GetControlRect(false, 1);
                     _password = EditorGUILayout.PasswordField(_password);
+                    if (_wereCredentialsOr2AuthInvalid)
+                        EditorGUILayout.LabelField("Incorrect username and/or password"); // ToDo: Make red
                     // Login Button
                     EditorGUILayout.GetControlRect(false, 12);
                     var buttonRect = EditorGUILayout.GetControlRect(true, 42);
@@ -111,7 +114,7 @@ namespace Foxscore.EasyLogin
                         if (GUI.Button(buttonRect, "Login", _nextStateButtonStyle))
                         {
                             _wereCredentialsOr2AuthInvalid = false;
-                            ValidateCredentials();
+                            new Task(ValidateCredentials).Start();
                             _state = State.VerifyingCredentials;
                         }
 
@@ -146,6 +149,8 @@ namespace Foxscore.EasyLogin
                     );
                     EditorGUILayout.GetControlRect(false, 1);
                     _2faCode = EditorGUILayout.TextField(_2faCode);
+                    if (_wereCredentialsOr2AuthInvalid)
+                        EditorGUILayout.LabelField("Incorrect 2FA code"); // ToDo: Make red
                     // Verify Button
                     EditorGUILayout.GetControlRect(false, 12);
                     buttonRect = EditorGUILayout.GetControlRect(true, 42);
@@ -153,7 +158,7 @@ namespace Foxscore.EasyLogin
                         if (GUI.Button(buttonRect, "Continue", _nextStateButtonStyle))
                         {
                             _wereCredentialsOr2AuthInvalid = false;
-                            Validate2FA();
+                            new Task(Validate2FA).Start();
                             _state = State.Verifying2Auth;
                         }
 
@@ -207,176 +212,90 @@ namespace Foxscore.EasyLogin
             _state = State.Error;
         }
 
-        #region Login
-
         private void ValidateCredentials()
         {
-            VRCSdkControlPanel.InitAccount();
-            // APIUser.Login(_username, _password, SuccessCallback, ErrorCallback, TwoFactorCallback);
-            // ToDo: Switch to using custom API instead of VRChat's (cause their implementations are shite)
             API.Login(_username, _password,
                 // Success
-                (authCookie, id) => { },
+                (authCookie, id, username, profilePictureUrl) =>
+                {
+                    Complete(authCookie, null, id, username, profilePictureUrl);
+                },
                 // Invalid Credentials
-                () => { },
+                () =>
+                {
+                    _wereCredentialsOr2AuthInvalid = true;
+                    _password = "";
+                    EditorApplication.delayCall += () => GUI.FocusControl("");  
+                    _state = State.EnterCredentials;
+                },
                 // 2FA Required
-                (cookie, type) => { },
+                (cookie, type) =>
+                {
+                    _authToken = cookie;
+                    _2FaType = type;
+                    _2faCode = "";
+                    _wereCredentialsOr2AuthInvalid = false;
+                    _state = State.Enter2Auth;
+                },
                 // Error
-                error => { }
+                error =>
+                {
+                    ShowError("Login Error", error);
+                    Debug.LogError($"An error occured while trying to login: {error}");
+                }
             );
         }
-
-        private void SuccessCallback(ApiModelContainer<APIUser> c)
-        {
-            Debug.Log("CALLBACK: Success");
-
-            var user = c.Model as APIUser;
-            string authCookie;
-            if (c.Cookies.TryGetValue("twoFactorAuth", out var twoFactorAuthCookie))
-            {
-                ApiCredentials.Set(user!.username, _username, "vrchat", c.Cookies["auth"], twoFactorAuthCookie);
-                authCookie = c.Cookies["auth"];
-            }
-            else if (c.Cookies.TryGetValue("auth", out authCookie))
-            {
-                ApiCredentials.Set(user!.username, _username, "vrchat", authCookie);
-            }
-            else
-            {
-                APIUser.Logout();
-                const string errorMessage = "Login was successful but VRChat did not return the 'auth' cookie!";
-                ShowError("Error logging in", errorMessage);
-                Debug.Log("Error logging in: " + errorMessage);
-                _state = State.EnterCredentials;
-                _password = "";
-                return;
-            }
-
-            AnalyticsSDK.LoggedInUserChanged(user);
-
-            if (!APIUser.CurrentUser.canPublishAllContent)
-            {
-                if (SessionState.GetString("HasShownContentPublishPermissionsDialogForUser", "") != user.id)
-                {
-                    SessionState.SetString("HasShownContentPublishPermissionsDialogForUser", user.id);
-                    VRCSdkControlPanel.ShowContentPublishPermissionsDialog();
-                }
-            }
-
-            // Fetch platforms that the user can publish to
-            ApiUserPlatforms.Fetch(user.id, null, null);
-
-            Complete(authCookie, twoFactorAuthCookie);
-        }
-
-        private void ErrorCallback(ApiModelContainer<APIUser> c)
-        {
-            Debug.Log("CALLBACK: Error");
-
-            APIUser.Logout();
-            var error = c.Error;
-            ShowError("Error logging in", error);
-            Debug.Log("Error logging in: " + error);
-            _password = "";
-        }
-
-        private void TwoFactorCallback(ApiModelContainer<API2FA> c)
-        {
-            Debug.Log("CALLBACK: TwoFactor");
-
-            if (c.Cookies.TryGetValue("auth", out var authCookie))
-                ApiCredentials.Set(_username, _username, "vrchat", authCookie);
-            var model2Fa = c.Model as API2FA;
-            if (model2Fa!.requiresTwoFactorAuth.Contains(API2FA.TIME_BASED_ONE_TIME_PASSWORD_AUTHENTICATION))
-            {
-                _2FaType = TwoFactorType.TOTP;
-                Debug.Log("OLD STATE: " + _state);
-                _state = State.Enter2Auth;
-                Debug.Log("NEW STATE: " + _state);
-                Repaint();
-                Debug.Log("TOTP");
-            }
-            else if (model2Fa.requiresTwoFactorAuth.Contains(API2FA.EMAIL_BASED_ONE_TIME_PASSWORD_AUTHENTICATION))
-            {
-                _2FaType = TwoFactorType.Email;
-                _state = State.Enter2Auth;
-                Debug.Log("Email");
-            }
-            else
-            {
-                _2FaType = TwoFactorType.None;
-                Complete(authCookie, null);
-                Debug.Log("Success");
-            }
-        }
-
-        #endregion
-
-        #region 2FA
 
         private void Validate2FA()
         {
             var type = _2FaType == TwoFactorType.Email
                 ? API2FA.EMAIL_BASED_ONE_TIME_PASSWORD_AUTHENTICATION
                 : API2FA.TIME_BASED_ONE_TIME_PASSWORD_AUTHENTICATION;
-            APIUser.VerifyTwoFactorAuthCode(_2faCode, type, _username, _password,
-                delegate(ApiDictContainer c)
+
+            API.Verify2Fa(_authToken, _2faCode, _2FaType,
+                // Success
+                twoFactorAuthCookie =>
                 {
-                    var user = c.Model as APIUser;
-                    string authCookie;
-                    if (c.Cookies.TryGetValue("twoFactorAuth", out var twoFactorAuthCookie))
-                    {
-                        ApiCredentials.Set(user!.username, _username, "vrchat", c.Cookies["auth"], twoFactorAuthCookie);
-                        authCookie = c.Cookies["auth"];
-                    }
-                    else if (c.Cookies.TryGetValue("auth", out authCookie))
-                    {
-                        ApiCredentials.Set(user!.username, _username, "vrchat", authCookie);
-                    }
-                    else
-                    {
-                        _wereCredentialsOr2AuthInvalid = true;
-                        APIUser.Logout();
-                        const string errorMessage = "Login was successful but VRChat did not return the 'auth' cookie!";
-                        ShowError("Error logging in", errorMessage);
-                        Debug.Log("Error logging in: " + errorMessage);
-                        _state = State.EnterCredentials;
-                        _password = "";
-                        return;
-                    }
-
-                    AnalyticsSDK.LoggedInUserChanged(user);
-
-                    if (!APIUser.CurrentUser.canPublishAllContent)
-                    {
-                        if (SessionState.GetString("HasShownContentPublishPermissionsDialogForUser", "") != user.id)
+                    API.FetchProfile(new AuthTokens(_authToken, twoFactorAuthCookie),
+                        // Success 
+                        (id, username, profilePictureUrl) =>
                         {
-                            SessionState.SetString("HasShownContentPublishPermissionsDialogForUser", user.id);
-                            VRCSdkControlPanel.ShowContentPublishPermissionsDialog();
+                            Complete(_authToken, twoFactorAuthCookie, id, username, profilePictureUrl);
+                        },
+                        // Invalid credentials - SHOULD NEVER OCCUR
+                        () =>
+                        {
+                            ShowError("Failed to fetch profile", "The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
+                            Debug.LogError($"The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
+                        },
+                        // Error
+                        error =>
+                        {
+                            ShowError("Failed to fetch profile", error);
+                            Debug.LogError($"An error occured while trying to fetch the profile during login: {error}");
                         }
-                    }
-
-                    // Fetch platforms that the user can publish to
-                    ApiUserPlatforms.Fetch(user.id, null, null);
-
-                    Complete(authCookie, twoFactorAuthCookie);
+                    );
                 },
-                delegate
+                // Invalid code
+                () =>
                 {
                     _wereCredentialsOr2AuthInvalid = true;
                     _2faCode = "";
+                    GUI.FocusControl("");
                     _state = State.Enter2Auth;
+                },
+                // Error
+                error =>
+                {
+                    ShowError("Login Error", error);
+                    Debug.LogError($"An error occured while trying to login: {error}");
                 }
             );
         }
 
-        #endregion
-
-        private void Complete(Cookie authCookie, Cookie twoFactorAuthCookie)
+        private void Complete(string authToken, string twoFactorAuthToken, string id, string username,
+            string profilePictureUrl)
         {
-            // ToDo: Convert cookies from object to json
-            
-            var id = APIUser.CurrentUser.id;
             var acc = Config.GetAccounts().FirstOrDefault(a => a.Id == id);
 
             if (acc == null)
@@ -384,25 +303,21 @@ namespace Foxscore.EasyLogin
                 acc = new AccountStruct()
                 {
                     Id = id,
-                    Username = APIUser.CurrentUser.username,
-                    ProfilePictureUrl = APIUser.CurrentUser.profilePicImageUrl,
+                    Username = username,
+                    ProfilePictureUrl = profilePictureUrl,
                 };
             }
             else
             {
-                acc = new AccountStruct()
-                {
-                    ProfilePictureUrl = APIUser.CurrentUser.profilePicImageUrl,
-                };
+                acc.Username = username;
+                acc.ProfilePictureUrl = profilePictureUrl;
             }
 
             Config.UpdateAccount(acc);
-            Accounts.KeyringManager.Set(id, authCookie, twoFactorAuthCookie);
-            Close();
+            Accounts.KeyringManager.Set(id, new AuthTokens(authToken, twoFactorAuthToken));
+            Accounts.SetCurrentAccount(acc);
 
-            var onAuthenticationVerifiedAction = AccountWindowGUIHook.OnAuthenticationVerifiedAction;
-            if (onAuthenticationVerifiedAction != null)
-                onAuthenticationVerifiedAction();
+            _closeRequested = true;
         }
     }
 }

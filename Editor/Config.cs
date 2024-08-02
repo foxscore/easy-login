@@ -16,6 +16,7 @@ namespace Foxscore.EasyLogin
     [InitializeOnLoad]
     public class Config
     {
+        [JsonProperty("accounts")]
         private readonly List<AccountStruct> _accounts = new();
 
         private static Config _instance;
@@ -70,6 +71,7 @@ namespace Foxscore.EasyLogin
             }
             _instance._accounts.Remove(acc);
             _instance._accounts.Add(account);
+            Save();
         }
 
         internal static void RemoveAccount(string internalId)
