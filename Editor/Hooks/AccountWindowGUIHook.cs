@@ -15,6 +15,9 @@ namespace Foxscore.EasyLogin.Hooks
     [InitializeOnLoad]
     public static class AccountWindowGUIHook
     {
+        internal static AuthSession AuthSession;
+        internal static Action Popup;
+
         private static readonly FieldInfo OnAuthenticationVerifiedActionFieldInfo;
 
         static AccountWindowGUIHook()
@@ -107,7 +110,12 @@ namespace Foxscore.EasyLogin.Hooks
 
             #endregion
 
-            if (Accounts.CurrentAccount == null)
+            if (AuthSession is not null)
+            {
+                AuthSession.Render();
+                VRCSdkControlPanel.window.Repaint();
+            }
+            else if (Accounts.CurrentAccount == null)
             {
                 Rect buttonRect;
                 Rect iconRect;
@@ -130,11 +138,12 @@ namespace Foxscore.EasyLogin.Hooks
                         {
                             EditorApplication.delayCall += () =>
                             {
+                                // ToDo: Change to in-window popup instead of dialog
                                 if (EditorUtility.DisplayDialog(
                                         "Easy Login",
                                         "Sessions expired. Please login again.",
                                         "Ok", "Not now"))
-                                    AuthWindow.ShowAuthWindow(account);
+                                    AuthSession = new AuthSession(account);
                             };
                         }, error =>
                         {
@@ -192,7 +201,7 @@ namespace Foxscore.EasyLogin.Hooks
                 labelRect = new Rect(iconRect.xMax + 11, iconRect.y, 200, 42);
 
                 if (GUI.Button(buttonRect, "", "helpbox"))
-                    EditorApplication.delayCall += () => AuthWindow.ShowAuthWindow();
+                    AuthSession = new AuthSession();
 
                 icon = Icons.Login;
                 GUI.DrawTexture(iconRect, icon);
@@ -265,11 +274,13 @@ namespace Foxscore.EasyLogin.Hooks
                 EditorGUILayout.LabelField("Can publish Worlds", canPublishWorldsString);
 
                 EditorGUILayout.Space();
-                if (GUILayout.Button("Switch Account"))
+                var buttonRect = EditorGUILayout.GetControlRect(true, 21, "button");
+                if (GUI.Button(buttonRect, "Switch Account"))
                 {
                     ApiCredentials.Clear();
                     Accounts.ClearCurrentAccount();
                 }
+                EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
             }
 
             EditorGUILayout.EndVertical();

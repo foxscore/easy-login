@@ -1,33 +1,23 @@
-﻿using System;
-using System.Drawing;
+
+using System;
 using System.Linq;
 using System.Threading.Tasks;
-using BestHTTP.Cookies;
 using Foxscore.EasyLogin.Hooks;
 using Foxscore.EasyLogin.KeyringManagers;
 using UnityEditor;
-using UnityEditor.PackageManager.UI;
 using UnityEngine;
 using VRC.Core;
 
-// ReSharper disable once CheckNamespace
 namespace Foxscore.EasyLogin
 {
-    public class AuthWindow : EditorWindow
+    internal sealed class AuthSession
     {
-        internal static void ShowAuthWindow(AccountStruct account = null)
+        private enum State
         {
-            var window = CreateWindow<AuthWindow>();
-            if (account != null)
-            {
-                window._isUsernameReadonly = true;
-                window._username = account.Username;
-                // TODO: User 2FA Token if one is stored
-                // TODO: On logout, checkbox for if we want to keep the 2auth token 
-            }
-
-            window.titleContent = new GUIContent("VRC Account");
-            window.ShowUtility();
+            EnterCredentials,
+            VerifyingCredentials,
+            Enter2Auth,
+            Verifying2Auth,
         }
 
         private readonly SpinnerProvider _spinner = new();
@@ -40,27 +30,19 @@ namespace Foxscore.EasyLogin
         private static State _state = State.EnterCredentials;
         private TwoFactorType _2FaType = TwoFactorType.None;
         private string _authToken;
-        private bool _closeRequested;
-
-        private static string _errorTitle;
-        private static string _errorMessage;
 
         private GUIStyle _titleStyle;
         private GUIStyle _labelStyle;
         private GUIStyle _nextStateButtonStyle;
-
-        private enum State
+        
+        public AuthSession(AccountStruct account = null)
         {
-            EnterCredentials,
-            VerifyingCredentials,
-            Enter2Auth,
-            Verifying2Auth,
-            Error,
-        }
-
-        private void OnEnable()
-        {
-            minSize = maxSize = new Vector2(400, 400);
+            if (account is not null)
+            {
+                _isUsernameReadonly = true;
+                _username = account.Username;   
+            }
+            
             _state = State.EnterCredentials;
 
             _titleStyle = new GUIStyle("label")
@@ -80,21 +62,12 @@ namespace Foxscore.EasyLogin
             VRCSdkControlPanel.InitAccount();
         }
 
-        private void OnGUI()
+        public void Render()
         {
-            if (_closeRequested)
-                Close();
-            
             switch (_state)
             {
                 case State.EnterCredentials:
-                    GUILayout.FlexibleSpace();
-                    GUILayout.Label(
-                        _isUsernameReadonly ? "Update Account" : "Add Account",
-                        _titleStyle
-                    );
                     // Username
-                    GUILayout.FlexibleSpace();
                     EditorGUILayout.LabelField("Username / Email", _labelStyle);
                     EditorGUILayout.GetControlRect(false, 1);
                     using (new EditorGUI.DisabledScope(_isUsernameReadonly))
@@ -117,11 +90,9 @@ namespace Foxscore.EasyLogin
                             new Task(ValidateCredentials).Start();
                             _state = State.VerifyingCredentials;
                         }
-
-                    GUILayout.FlexibleSpace();
                     break;
+                
                 case State.VerifyingCredentials:
-                    GUILayout.FlexibleSpace();
                     GUILayout.Label("Verifying Credentials", _titleStyle);
                     EditorGUILayout.GetControlRect(false, 12);
                     const float spinnerSize = 32;
@@ -129,16 +100,10 @@ namespace Foxscore.EasyLogin
                     spinnerRect.x += (spinnerRect.width - spinnerSize) / 2;
                     spinnerRect.width = spinnerSize;
                     GUI.DrawTexture(spinnerRect, _spinner.Update());
-                    GUILayout.FlexibleSpace();
                     break;
+                
                 case State.Enter2Auth:
-                    GUILayout.FlexibleSpace();
-                    GUILayout.Label(
-                        "Enter 2FA Code",
-                        _titleStyle
-                    );
                     // 2FA Code
-                    GUILayout.FlexibleSpace();
                     GUILayout.Label(
                         "Enter the code " + (
                             _2FaType == TwoFactorType.Email
@@ -161,55 +126,50 @@ namespace Foxscore.EasyLogin
                             new Task(Validate2FA).Start();
                             _state = State.Verifying2Auth;
                         }
-
-                    GUILayout.FlexibleSpace();
                     break;
+                
                 case State.Verifying2Auth:
-                    GUILayout.FlexibleSpace();
                     GUILayout.Label("Verifying 2FA Code", _titleStyle);
                     EditorGUILayout.GetControlRect(false, 12);
                     spinnerRect = EditorGUILayout.GetControlRect(false, spinnerSize);
                     spinnerRect.x += (spinnerRect.width - spinnerSize) / 2;
                     spinnerRect.width = spinnerSize;
                     GUI.DrawTexture(spinnerRect, _spinner.Update());
-                    GUILayout.FlexibleSpace();
                     break;
-                case State.Error:
-                    GUILayout.FlexibleSpace();
-                    GUILayout.Label(_errorTitle, _titleStyle);
-                    EditorGUILayout.GetControlRect(false, 12);
-                    spinnerRect = EditorGUILayout.GetControlRect(false, spinnerSize);
-                    spinnerRect.x += (spinnerRect.width - spinnerSize) / 2;
-                    spinnerRect.width = spinnerSize;
-                    var errorIcon = EditorGUIUtility.IconContent("console.erroricon").image;
-                    GUI.DrawTexture(spinnerRect, errorIcon);
-                    EditorGUILayout.GetControlRect(false, 12);
-                    EditorGUILayout.HelpBox(_errorMessage, MessageType.None);
-                    EditorGUILayout.GetControlRect(false, 12);
-                    buttonRect = EditorGUILayout.GetControlRect(true, 42);
-                    if (GUI.Button(buttonRect, "Close", _nextStateButtonStyle))
-                    {
-                        _password = "";
-                        _2faCode = "";
-                        _2FaType = TwoFactorType.None;
-                        _state = State.EnterCredentials;
-                    }
-
-                    GUILayout.FlexibleSpace();
-                    break;
+                
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            Repaint();
         }
-
-        // ReSharper disable once ParameterHidesMember
+        
         private void ShowError(string title, string message)
         {
-            _errorTitle = title;
-            _errorMessage = message;
-            _state = State.Error;
+            EditorUtility.DisplayDialog(title, message, "Close");
+            _password = "";
+            _2faCode = "";
+            _2FaType = TwoFactorType.None;
+            _state = State.EnterCredentials;
+
+            // GUILayout.FlexibleSpace();
+            // GUILayout.Label(_errorTitle, _titleStyle);
+            // EditorGUILayout.GetControlRect(false, 12);
+            // spinnerRect = EditorGUILayout.GetControlRect(false, spinnerSize);
+            // spinnerRect.x += (spinnerRect.width - spinnerSize) / 2;
+            // spinnerRect.width = spinnerSize;
+            // var errorIcon = EditorGUIUtility.IconContent("console.erroricon").image;
+            // GUI.DrawTexture(spinnerRect, errorIcon);
+            // EditorGUILayout.GetControlRect(false, 12);
+            // EditorGUILayout.HelpBox(_errorMessage, MessageType.None);
+            // EditorGUILayout.GetControlRect(false, 12);
+            // buttonRect = EditorGUILayout.GetControlRect(true, 42);
+            // if (GUI.Button(buttonRect, "Close", _nextStateButtonStyle))
+            // {
+            //     _password = "";
+            //     _2faCode = "";
+            //     _2FaType = TwoFactorType.None;
+            //     _state = State.EnterCredentials;
+            // }
+            // GUILayout.FlexibleSpace();
         }
 
         private void ValidateCredentials()
@@ -281,8 +241,8 @@ namespace Foxscore.EasyLogin
                 {
                     _wereCredentialsOr2AuthInvalid = true;
                     _2faCode = "";
-                    GUI.FocusControl("");
                     _state = State.Enter2Auth;
+                    GUI.FocusControl("");
                 },
                 // Error
                 error =>
@@ -317,7 +277,7 @@ namespace Foxscore.EasyLogin
             Accounts.KeyringManager.Set(id, new AuthTokens(authToken, twoFactorAuthToken));
             Accounts.SetCurrentAccount(acc);
 
-            _closeRequested = true;
+            AccountWindowGUIHook.AuthSession = null;
         }
     }
 }
