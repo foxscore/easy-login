@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -15,13 +16,15 @@ namespace Foxscore.EasyLogin
 {
     public delegate void On2FaRequired(string auth, TwoFactorType type);
 
-    public delegate void OnLoginSuccess(string auth, string userId, string username, string profilePictureUrl);
+    public delegate void OnLoginSuccess(string auth, string userId, string username, string displayName, string profilePictureUrl);
 
     public delegate void On2FaSuccess(string twoFactorAuth);
 
     public delegate void OnCookieVerificationSuccess();
 
-    public delegate void OnFetchProfileSuccess(string id, string username, string profilePictureUrl);
+    public delegate void OnFetchProfileSuccess(string id, string username, string displayName, string profilePictureUrl);
+    
+    public delegate void OnAssetFetchSuccess(byte[] bytes);
 
     public delegate void OnInvalidCredentials();
 
@@ -98,7 +101,10 @@ namespace Foxscore.EasyLogin
                         // Success
                         if (jObject.TryGetPropertyValue("id", out string idToken))
                         {
-                            if (!jObject.TryGetPropertyValue("username", out string usernameToken))
+                            if (
+                                !jObject.TryGetPropertyValue("username", out string usernameToken) ||
+                                !jObject.TryGetPropertyValue("displayName", out string displayNameToken)
+                            )
                             {
                                 onError($"Unexpected response: {response.DataAsText}");
                                 return;
@@ -110,8 +116,7 @@ namespace Foxscore.EasyLogin
                                     profilePictureUrl = null;
                             }
                             
-                            onSuccess(authCookie.Value, idToken, usernameToken,
-                                profilePictureUrl);
+                            onSuccess(authCookie.Value, idToken, usernameToken, displayNameToken, profilePictureUrl);
                         }
                         // 2FA
                         else if (jObject.TryGetPropertyValue("requiresTwoFactorAuth", out JArray validAuthsArrayToken))
@@ -225,7 +230,16 @@ namespace Foxscore.EasyLogin
                             return;
                         }
 
-                        if (jObject.TryGetPropertyValue("currentAvatarImageUrl", out string profilePictureUrl))
+                        // Get the profile image
+                        if (jObject.TryGetPropertyValue("userIcon", out string profilePictureUrl))
+                        {
+                            if (string.IsNullOrWhiteSpace(profilePictureUrl))
+                                profilePictureUrl = null;
+                        }
+                        // Fallback to avatar image
+                        if (
+                            profilePictureUrl == null &&
+                            jObject.TryGetPropertyValue("currentAvatarImageUrl", out profilePictureUrl))
                         {
                             if (string.IsNullOrWhiteSpace(profilePictureUrl))
                                 profilePictureUrl = null;
@@ -233,8 +247,9 @@ namespace Foxscore.EasyLogin
 
                         // Success
                         if (jObject.TryGetPropertyValue("id", out string idToken) &&
-                            jObject.TryGetPropertyValue("username", out string usernameToken))
-                            onSuccess(idToken, usernameToken, profilePictureUrl);
+                            jObject.TryGetPropertyValue("username", out string usernameToken) &&
+                            jObject.TryGetPropertyValue("displayName", out string displayNameToken))
+                            onSuccess(idToken, usernameToken, displayNameToken, profilePictureUrl);
                         // Invalid response
                         else
                             onError($"Unexpected response: {response.DataAsText}");
@@ -249,6 +264,27 @@ namespace Foxscore.EasyLogin
                         onError($"Unexpected status code: {response.StatusCode}");
                         return;
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                onError("Internal error");
+            }
+        }
+
+        public static void FetchAsset(string url, OnAssetFetchSuccess onSuccess, OnError onError)
+        {
+            try
+            {
+                var request = new HTTPRequest(new Uri(url), HTTPMethods.Get);
+                request.DisableCache = true;
+                PopulateHeaders(request);
+                var response = request.SendAndAwait();
+
+                if (response.StatusCode is 200)
+                    onSuccess(response.Data);
+                else
+                    onError($"Unexpected status code: {response.StatusCode}");
             }
             catch (Exception e)
             {

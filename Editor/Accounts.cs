@@ -16,20 +16,8 @@ namespace Foxscore.EasyLogin
     {
         public string Id;
         public string Username;
+        public string DisplayName;
         public string ProfilePictureUrl;
-
-        private Texture2D _texture;
-
-        [JsonIgnore]
-        public Texture2D ProfilePicture
-        {
-            get
-            {
-                if (_texture != null) return _texture;
-                return null;
-                // ToDo: Load image
-            }
-        }
     }
 
     [InitializeOnLoad]
@@ -67,6 +55,22 @@ namespace Foxscore.EasyLogin
                 {
                     // CanCurrentAccountPublishAvatars = (user.Model as APIUser).canPublishAvatars;
                     // CanCurrentAccountPublishWorlds = (user.Model as APIUser).canPublishWorlds;
+                    
+                    //region Update profile icon
+                    var apiUser = user.Model as APIUser;
+
+                    var displayName = apiUser!.displayName;
+                    var iconUrl = apiUser!.userIcon;
+                    if (string.IsNullOrEmpty(iconUrl)) iconUrl = apiUser.currentAvatarImageUrl;
+                    
+                    if (displayName != account.DisplayName || account.ProfilePictureUrl != iconUrl)
+                    {
+                        account.DisplayName = displayName;
+                        account.ProfilePictureUrl = iconUrl;
+                        Config.UpdateAccount(account);
+                        ProfilePictureCache.ForceRedownload(account);
+                    }
+                    //endregion
                 }, error =>
                 {
                     if (error == null)
@@ -92,7 +96,7 @@ namespace Foxscore.EasyLogin
 
         static Accounts()
         {
-            if (Preferences.UserOriginalLoginSystem)
+            if (Preferences.UseOriginalLoginSystem)
                 ApiCredentials.Clear();
             
             CurrentUserProperty =

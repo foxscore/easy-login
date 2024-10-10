@@ -84,7 +84,7 @@ namespace Foxscore.EasyLogin
 
         private static void OnFileWatcherFoundChange(object sender, FileSystemEventArgs e)
         {
-            Debug.Log("Detected change in EasyLogin config, reloading...");
+            // Debug.Log("Detected change in EasyLogin config, reloading...");
             Load();
         }
 

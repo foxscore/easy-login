@@ -1,5 +1,5 @@
-
 using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Foxscore.EasyLogin.Hooks;
@@ -34,15 +34,15 @@ namespace Foxscore.EasyLogin
         private GUIStyle _titleStyle;
         private GUIStyle _labelStyle;
         private GUIStyle _nextStateButtonStyle;
-        
+
         public AuthSession(AccountStruct account = null)
         {
             if (account is not null)
             {
                 _isUsernameReadonly = true;
-                _username = account.Username;   
+                _username = account.Username;
             }
-            
+
             _state = State.EnterCredentials;
 
             _titleStyle = new GUIStyle("label")
@@ -90,8 +90,17 @@ namespace Foxscore.EasyLogin
                             new Task(ValidateCredentials).Start();
                             _state = State.VerifyingCredentials;
                         }
+
+                    // Cancel Button
+                    buttonRect = EditorGUILayout.GetControlRect(true, 21);
+                    if (GUI.Button(buttonRect, "Cancel"))
+                    {
+                        AccountWindowGUIHook.AuthSession = null;
+                        GUI.FocusControl(null);
+                    }
+
                     break;
-                
+
                 case State.VerifyingCredentials:
                     GUILayout.Label("Verifying Credentials", _titleStyle);
                     EditorGUILayout.GetControlRect(false, 12);
@@ -101,7 +110,7 @@ namespace Foxscore.EasyLogin
                     spinnerRect.width = spinnerSize;
                     GUI.DrawTexture(spinnerRect, _spinner.Update());
                     break;
-                
+
                 case State.Enter2Auth:
                     // 2FA Code
                     GUILayout.Label(
@@ -126,8 +135,18 @@ namespace Foxscore.EasyLogin
                             new Task(Validate2FA).Start();
                             _state = State.Verifying2Auth;
                         }
+
+                    // Cancel Button
+                    EditorGUILayout.GetControlRect(false, 12);
+                    buttonRect = EditorGUILayout.GetControlRect(true, 21);
+                    if (GUI.Button(buttonRect, "Cancel"))
+                    {
+                        AccountWindowGUIHook.AuthSession = null;
+                        GUI.FocusControl(null);
+                    }
+
                     break;
-                
+
                 case State.Verifying2Auth:
                     GUILayout.Label("Verifying 2FA Code", _titleStyle);
                     EditorGUILayout.GetControlRect(false, 12);
@@ -136,12 +155,12 @@ namespace Foxscore.EasyLogin
                     spinnerRect.width = spinnerSize;
                     GUI.DrawTexture(spinnerRect, _spinner.Update());
                     break;
-                
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
         }
-        
+
         private void ShowError(string title, string message)
         {
             EditorUtility.DisplayDialog(title, message, "Close");
@@ -149,43 +168,23 @@ namespace Foxscore.EasyLogin
             _2faCode = "";
             _2FaType = TwoFactorType.None;
             _state = State.EnterCredentials;
-
-            // GUILayout.FlexibleSpace();
-            // GUILayout.Label(_errorTitle, _titleStyle);
-            // EditorGUILayout.GetControlRect(false, 12);
-            // spinnerRect = EditorGUILayout.GetControlRect(false, spinnerSize);
-            // spinnerRect.x += (spinnerRect.width - spinnerSize) / 2;
-            // spinnerRect.width = spinnerSize;
-            // var errorIcon = EditorGUIUtility.IconContent("console.erroricon").image;
-            // GUI.DrawTexture(spinnerRect, errorIcon);
-            // EditorGUILayout.GetControlRect(false, 12);
-            // EditorGUILayout.HelpBox(_errorMessage, MessageType.None);
-            // EditorGUILayout.GetControlRect(false, 12);
-            // buttonRect = EditorGUILayout.GetControlRect(true, 42);
-            // if (GUI.Button(buttonRect, "Close", _nextStateButtonStyle))
-            // {
-            //     _password = "";
-            //     _2faCode = "";
-            //     _2FaType = TwoFactorType.None;
-            //     _state = State.EnterCredentials;
-            // }
-            // GUILayout.FlexibleSpace();
+            GUI.FocusControl(null);
         }
 
         private void ValidateCredentials()
         {
             API.Login(_username, _password,
                 // Success
-                (authCookie, id, username, profilePictureUrl) =>
+                (authCookie, id, username, displayName, profilePictureUrl) =>
                 {
-                    Complete(authCookie, null, id, username, profilePictureUrl);
+                    Complete(authCookie, null, id, username, displayName, profilePictureUrl);
                 },
                 // Invalid Credentials
                 () =>
                 {
                     _wereCredentialsOr2AuthInvalid = true;
                     _password = "";
-                    EditorApplication.delayCall += () => GUI.FocusControl("");  
+                    EditorApplication.delayCall += () => GUI.FocusControl("");
                     _state = State.EnterCredentials;
                 },
                 // 2FA Required
@@ -218,15 +217,17 @@ namespace Foxscore.EasyLogin
                 {
                     API.FetchProfile(new AuthTokens(_authToken, twoFactorAuthCookie),
                         // Success 
-                        (id, username, profilePictureUrl) =>
+                        (id, username, displayName, profilePictureUrl) =>
                         {
-                            Complete(_authToken, twoFactorAuthCookie, id, username, profilePictureUrl);
+                            Complete(_authToken, twoFactorAuthCookie, id, username, displayName, profilePictureUrl);
                         },
                         // Invalid credentials - SHOULD NEVER OCCUR
                         () =>
                         {
-                            ShowError("Failed to fetch profile", "The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
-                            Debug.LogError($"The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
+                            ShowError("Failed to fetch profile",
+                                "The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
+                            Debug.LogError(
+                                $"The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
                         },
                         // Error
                         error =>
@@ -254,22 +255,24 @@ namespace Foxscore.EasyLogin
         }
 
         private void Complete(string authToken, string twoFactorAuthToken, string id, string username,
-            string profilePictureUrl)
+            string displayName, string profilePictureUrl)
         {
             var acc = Config.GetAccounts().FirstOrDefault(a => a.Id == id);
 
             if (acc == null)
             {
-                acc = new AccountStruct()
+                acc = new AccountStruct
                 {
                     Id = id,
                     Username = username,
+                    DisplayName = displayName,
                     ProfilePictureUrl = profilePictureUrl,
                 };
             }
             else
             {
                 acc.Username = username;
+                acc.DisplayName = displayName;
                 acc.ProfilePictureUrl = profilePictureUrl;
             }
 
