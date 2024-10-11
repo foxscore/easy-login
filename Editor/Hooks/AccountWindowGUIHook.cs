@@ -17,7 +17,6 @@ namespace Foxscore.EasyLogin.Hooks
     public static class AccountWindowGUIHook
     {
         internal static AuthSession AuthSession;
-        internal static Action Popup;
 
         private static readonly FieldInfo OnAuthenticationVerifiedActionFieldInfo;
 
@@ -293,7 +292,15 @@ namespace Foxscore.EasyLogin.Hooks
 
             var value = Preferences.UseOriginalLoginSystem;
             var newValue = EditorGUILayout.ToggleLeft("Use original login system", value);
-            if (value != newValue) Preferences.UseOriginalLoginSystem = newValue;
+            if (value != newValue)
+            {
+                Preferences.UseOriginalLoginSystem = newValue;
+                if (newValue == false)
+                {
+                    ApiCredentials.Clear();
+                    Accounts.ClearCurrentAccount();
+                }
+            }
 
             var styleValue = Preferences.ProfilePictureStyle;
             var newStyleValue = (StyleOption) EditorGUILayout.EnumPopup("Profile picture style", styleValue);
