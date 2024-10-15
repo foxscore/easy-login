@@ -11,6 +11,9 @@ jobs:
       PACKAGE_NAME: 'dev.foxscore.easy-login'
     steps:
 
+    - name: Checkout
+      uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+
     - name: Get Version
       id: version
       uses: zoexx/github-action-json-file-properties@b9f36ce6ee6fe2680cd3c32b2c62e22eade7e590
