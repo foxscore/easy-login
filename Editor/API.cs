@@ -2,10 +2,12 @@
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using BestHTTP;
 using Foxscore.EasyLogin.Extensions;
 using Foxscore.EasyLogin.KeyringManagers;
+using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -46,8 +48,24 @@ namespace Foxscore.EasyLogin
             UnityVersion = Application.unityVersion;
         }
 
-        private static void PopulateHeaders(HTTPRequest request, bool hasBody = false)
+        private static HTTPRequest CreateRequest(string apiEndpoint, HTTPMethods method, AuthTokens authTokens, bool hasBody = false)
         {
+            var request = new HTTPRequest(new Uri(apiEndpoint), method);
+            request.OnBeforeHeaderSend += req =>
+            {
+                req.RemoveHeader("Cookie");
+                if (authTokens != null)
+                {
+                    var cookies = $"auth={authTokens.Auth}";
+                    if (!string.IsNullOrEmpty(authTokens.TwoFactorAuth))
+                        cookies += $";twoFactorAuth={authTokens.TwoFactorAuth}";
+                    req.AddHeader("Cookie", cookies);
+                }
+            };
+            request.DisableCache = true;
+            request.Cookies.Clear();
+            request.RemoveHeaders();
+            
             request.AddHeader("X-MacAddress", MacAddress);
             request.AddHeader("X-SDK-Version", VRC.Tools.SdkVersion);
             request.AddHeader("X-Platform", "standalonewindows");
@@ -59,6 +77,8 @@ namespace Foxscore.EasyLogin
                 ? "application/json"
                 : "application/x-www-form-urlencoded"
             );
+            
+            return request;
         }
 
         public static void Login(string username, string password,
@@ -67,9 +87,7 @@ namespace Foxscore.EasyLogin
         {
             try
             {
-                var request = new HTTPRequest(new Uri(Endpoint + "auth/user"), HTTPMethods.Get);
-                request.DisableCache = true;
-                PopulateHeaders(request);
+                var request = CreateRequest(Endpoint + "auth/user", HTTPMethods.Get, null);
                 request.SetHeader("Authorization", "Basic " + Convert.ToBase64String(
                     Encoding.UTF8.GetBytes(
                         WebUtility.UrlEncode(username) + ':' + WebUtility.UrlEncode(password)
@@ -83,7 +101,7 @@ namespace Foxscore.EasyLogin
                         var authCookie = (response.Cookies ?? new()).FirstOrDefault(c => c.Name == "auth");
                         if (authCookie == null)
                         {
-                            onError("Login response is missing auth header. It's likely you're being rate-limited. Wait a bit and try again.");
+                            onError("Login response is missing auth header. Please report this to the developers of Easy Login.");
                             return;
                         }
                         
@@ -141,7 +159,6 @@ namespace Foxscore.EasyLogin
 
                     default:
                         onError($"Unexpected status code: {response.StatusCode}");
-                        Debug.LogWarning(response.DataAsText);
                         return;
                 }
             }
@@ -157,13 +174,7 @@ namespace Foxscore.EasyLogin
         {
             try
             {
-                var request = new HTTPRequest(new Uri($"{Endpoint}auth"),
-                    HTTPMethods.Get);
-                request.DisableCache = true;
-                PopulateHeaders(request);
-                request.Cookies.Add(new("auth", tokens.Auth));
-                if (!string.IsNullOrWhiteSpace(tokens.TwoFactorAuth))
-                    request.Cookies.Add(new("twoFactorAuth", tokens.TwoFactorAuth));
+                var request = CreateRequest(Endpoint + "auth", HTTPMethods.Get, tokens);
                 var response = request.SendAndAwait();
                 if (response.StatusCode != 200)
                 {
@@ -208,12 +219,7 @@ namespace Foxscore.EasyLogin
         {
             try
             {
-                var request = new HTTPRequest(new Uri(Endpoint + "auth/user"), HTTPMethods.Get);
-                request.DisableCache = true;
-                PopulateHeaders(request);
-                request.Cookies.Add(new("auth", tokens.Auth));
-                if (!string.IsNullOrWhiteSpace(tokens.TwoFactorAuth))
-                    request.Cookies.Add(new("twoFactorAuth", tokens.TwoFactorAuth));
+                var request = CreateRequest(Endpoint + "auth/user", HTTPMethods.Get, tokens);
                 var response = request.SendAndAwait();
 
                 switch (response.StatusCode)
@@ -276,9 +282,7 @@ namespace Foxscore.EasyLogin
         {
             try
             {
-                var request = new HTTPRequest(new Uri(url), HTTPMethods.Get);
-                request.DisableCache = true;
-                PopulateHeaders(request);
+                var request = CreateRequest(url, HTTPMethods.Get, null);
                 var response = request.SendAndAwait();
 
                 if (response.StatusCode is 200)
@@ -299,11 +303,12 @@ namespace Foxscore.EasyLogin
             try
             {
                 var otpType = type == TwoFactorType.Email ? "emailotp" : "totp";
-                var request = new HTTPRequest(new Uri($"{Endpoint}auth/twofactorauth/{otpType}/verify"),
-                    HTTPMethods.Post);
-                request.DisableCache = true;
-                PopulateHeaders(request, true);
-                request.Cookies.Add(new("auth", auth));
+                var request = CreateRequest(
+                    $"{Endpoint}auth/twofactorauth/{otpType}/verify",
+                    HTTPMethods.Post,
+                    new AuthTokens(auth, null),
+                    true
+                );
                 request.RawData = Encoding.UTF8.GetBytes($"{{\"code\":\"{code}\"}}");
                 var response = request.SendAndAwait();
                 if (response.StatusCode != 200)
@@ -320,10 +325,7 @@ namespace Foxscore.EasyLogin
 
         public static void InvalidateSession(AuthTokens tokens)
         {
-            var request = new HTTPRequest(new Uri($"{Endpoint}logout"),
-                HTTPMethods.Put);
-            request.DisableCache = true;
-            PopulateHeaders(request);
+            var request = CreateRequest($"{Endpoint}logout", HTTPMethods.Put, tokens);
             request.Cookies.Add(new("auth", tokens.Auth));
             if (!string.IsNullOrWhiteSpace(tokens.TwoFactorAuth))
                 request.Cookies.Add(new("twoFactorAuth", tokens.TwoFactorAuth));

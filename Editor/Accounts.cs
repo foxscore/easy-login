@@ -38,6 +38,9 @@ namespace Foxscore.EasyLogin
 
         public static void SetCurrentAccount(AccountStruct account)
         {
+            if (account == null)
+                throw new ArgumentNullException("account");
+            
             EditorApplication.delayCall += () => SessionState.SetString(SessionKey_CurrentUserId, account.Id);
             CurrentAccount = account;
             CanCurrentAccountPublishAvatars = null;
@@ -115,8 +118,9 @@ namespace Foxscore.EasyLogin
             var currentUserId = SessionState.GetString(SessionKey_CurrentUserId, null);
             if (!string.IsNullOrWhiteSpace(currentUserId))
             {
-                var acc = Config.GetAccounts().First(a => a.Id == currentUserId);
-                SetCurrentAccount(acc);
+                var acc = Config.GetAccounts().FirstOrDefault(a => a.Id == currentUserId);
+                if (acc != null)
+                    SetCurrentAccount(acc);
             }
         }
     }

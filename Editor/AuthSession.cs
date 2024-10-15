@@ -163,12 +163,15 @@ namespace Foxscore.EasyLogin
 
         private void ShowError(string title, string message)
         {
-            EditorUtility.DisplayDialog(title, message, "Close");
-            _password = "";
-            _2faCode = "";
-            _2FaType = TwoFactorType.None;
-            _state = State.EnterCredentials;
-            GUI.FocusControl(null);
+            EditorApplication.delayCall += () =>
+            {
+                EditorUtility.DisplayDialog(title, message, "Close");
+                _password = "";
+                _2faCode = "";
+                _2FaType = TwoFactorType.None;
+                _state = State.EnterCredentials;
+                GUI.FocusControl(null);
+            };
         }
 
         private void ValidateCredentials()
@@ -243,7 +246,7 @@ namespace Foxscore.EasyLogin
                     _wereCredentialsOr2AuthInvalid = true;
                     _2faCode = "";
                     _state = State.Enter2Auth;
-                    GUI.FocusControl("");
+                    EditorApplication.delayCall += () => GUI.FocusControl("");
                 },
                 // Error
                 error =>

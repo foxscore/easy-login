@@ -31,15 +31,7 @@ namespace Foxscore.EasyLogin
             if (!Directory.Exists(elDir))
                 Directory.CreateDirectory(elDir);
 
-            if (File.Exists(ConfigPath))
-            {
-                Load();
-            }
-            else
-            {
-                _instance = new();
-                Save();
-            }
+            Load();
 
             _watcher = new FileSystemWatcher(elDir, "config.json");
             _watcher.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite |
@@ -98,6 +90,12 @@ namespace Foxscore.EasyLogin
             }
 
             var json = File.ReadAllText(ConfigPath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                _instance = new();
+                Save();
+                return;
+            }
             try
             {
                 _instance = JsonConvert.DeserializeObject<Config>(json);
