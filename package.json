@@ -1,14 +1,15 @@
 {
   "name": "dev.foxscore.easy-login",
   "displayName": "EasyLogin",
-  "version": "1.0.0-dev.3",
+  "version": "1.0.0-beta.1",
   "description": "Allows you to be logged in across multiple projects with multiple accounts.",
+  "unity": "2022.3",
   "author": {
     "name": "Fox_score",
     "email": "felixkaiser2000@protonmail.com",
     "url": "https://foxscore.dev"
   },
   "vpmDependencies": {
-    "com.vrchat.base": "^3.5.1"
+    "com.vrchat.base": "^3.5.0"
   }
 }
