@@ -34,15 +34,13 @@ jobs:
 
     - name: Create Package Zip
       run: zip -r "/tmp/${{ env.zipFile }}" .
-      
-    - name: Track Package Meta Files
-      run: find "./" -name \*.meta >> /tmp/metaList
 
     - name: Create UnityPackage
-      uses: pCYSl5EDgo/create-unitypackage@cfcd3cf0391a5ef1306342794866a9897c32af0b
+      uses: foxscore/make-unitypackage@cbd3def23d6c9910b56e726b193c2363e5ca6adc
       with:
-        package-path: /tmp/${{ env.unityPackage }}
-        include-files: /tmp/metaList
+        path: .
+        saveTo: /tmp/${{ env.unityPackage }}
+        prefix: Packages/dev.foxscore.${{ env.PACKAGE_NAME }}/
 
     - name: Create Tag
       id: tag_version
