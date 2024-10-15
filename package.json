@@ -1,7 +1,7 @@
 {
   "name": "dev.foxscore.easy-login",
   "displayName": "EasyLogin",
-  "version": "1.0.0-dev",
+  "version": "1.0.0-dev.3",
   "description": "Allows you to be logged in across multiple projects with multiple accounts.",
   "author": {
     "name": "Fox_score",
