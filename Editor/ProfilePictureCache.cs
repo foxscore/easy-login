@@ -83,7 +83,7 @@ namespace Foxscore.EasyLogin
                     },
                     error =>
                     {
-                        Debug.LogError($"Error downloading image: {error}\n{account.ProfilePictureUrl}");
+                        Log.Error($"Error downloading image: {error}\n{account.ProfilePictureUrl}");
                     }
                 );
             }

@@ -145,7 +145,7 @@ namespace Foxscore.EasyLogin.Hooks
                                             "Ok", "Not now"))
                                         AuthSession = new AuthSession(account);
                                 };
-                            }, error => { Debug.LogError("Failed to verify credentials: " + error); })).Start();
+                            }, error => { Log.Error("Failed to verify credentials: " + error); })).Start();
                     }
 
                     // TODO: Load profile picture

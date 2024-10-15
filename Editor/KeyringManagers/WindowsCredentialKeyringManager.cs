@@ -7,11 +7,13 @@ using Newtonsoft.Json;
 // ReSharper disable once CheckNamespace
 namespace Foxscore.EasyLogin.KeyringManagers
 {
-    public class WindowsCredentialKeyringManager : IKeyringManager
+    public class WindowsCredentialKeyringManager : KeyringManager
     {
         private const string ServiceName = "Foxscore_EasyLogin";
 
-        AuthTokens IKeyringManager.Get(string id)
+        public WindowsCredentialKeyringManager(IEncryptionLayer encryptionLayer) : base(encryptionLayer) { }
+        
+        public override AuthTokens Get(string id)
         {
             using var c = new Credential();
             c.Target = $"{ServiceName}:{id}";
@@ -28,17 +30,20 @@ namespace Foxscore.EasyLogin.KeyringManagers
                 c3.Target = $"{ServiceName}:{id}:2fa:2";
                 c3.Load();
                 
-                twoFactorAuthToken = c2.Password + c3.Password;
+                twoFactorAuthToken = EncryptionLayer.Decrypt(c2.Password + c3.Password);
             }
 
-            return new AuthTokens(c.Password, twoFactorAuthToken);
+            return new AuthTokens(
+                EncryptionLayer.Decrypt(c.Password),
+                twoFactorAuthToken
+            );
         }
 
-        public void Set(string id, AuthTokens tokens) {
+        public override void Set(string id, AuthTokens tokens) {
             new Credential()
             {
                 Target = $"{ServiceName}:{id}",
-                Password = tokens.Auth,
+                Password = EncryptionLayer.Encrypt(tokens.Auth),
                 PersistanceType = PersistanceType.LocalComputer
             }.Save();
 
@@ -46,8 +51,9 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
             if (tokens.TwoFactorAuth != null)
             {
-                var part1 = tokens.TwoFactorAuth[..splitPoint];
-                var part2 = tokens.TwoFactorAuth[splitPoint..];
+                var encrypted = EncryptionLayer.Encrypt(tokens.TwoFactorAuth);
+                var part1 = encrypted[..splitPoint];
+                var part2 = encrypted[splitPoint..];
                 
                 new Credential()
                 {
@@ -79,7 +85,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
             }
         }
 
-        public void Delete(string id)
+        public override void Delete(string id)
         {
             using var c = new Credential();
             c.Target = $"{ServiceName}:{id}";

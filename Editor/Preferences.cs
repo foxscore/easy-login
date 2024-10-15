@@ -12,6 +12,8 @@ namespace Foxscore.EasyLogin
     
     public static class Preferences
     {
+        // TODO Move to Config class
+        
         public static bool UseOriginalLoginSystem
         {
             get => EditorPrefs.GetBool("Foxscore_EasyLogin::UseOriginalLoginSystem", false);

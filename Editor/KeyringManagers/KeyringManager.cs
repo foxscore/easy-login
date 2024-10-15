@@ -21,10 +21,18 @@ namespace Foxscore.EasyLogin.KeyringManagers
         public static AuthTokens FromJson(string json) => JsonConvert.DeserializeObject<AuthTokens>(json);
     };
 
-    public interface IKeyringManager
+    // ReSharper disable once UnusedTypeParameter
+    public abstract class KeyringManager
     {
-        public AuthTokens Get(string id);
-        public void Set(string id, AuthTokens tokens);
-        public void Delete(string id);
+        public readonly IEncryptionLayer EncryptionLayer;
+
+        public KeyringManager(IEncryptionLayer encryptionLayer)
+        {
+            EncryptionLayer = encryptionLayer;
+        }
+        
+        public abstract AuthTokens Get(string id);
+        public abstract void Set(string id, AuthTokens tokens);
+        public abstract void Delete(string id);
     }
 }

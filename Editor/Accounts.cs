@@ -29,8 +29,8 @@ namespace Foxscore.EasyLogin
         // ReSharper disable once InconsistentNaming
         private const string SessionKey_CurrentUserId = "Foxscore_EasyLogin::currentUserId";
 
-        internal static readonly IKeyringManager KeyringManager;
         private static readonly PropertyInfo CurrentUserProperty;
+        internal static KeyringManager KeyringManager;
 
         public static AccountStruct CurrentAccount { get; private set; }
         public static bool? CanCurrentAccountPublishAvatars { get; private set; }
@@ -77,9 +77,9 @@ namespace Foxscore.EasyLogin
                 }, error =>
                 {
                     if (error == null)
-                        Debug.LogError("Error while logging in");
+                        Log.Error("Error while logging in");
                     else
-                        Debug.LogError("Failed to login: " + error.Error);
+                        Log.Error("Failed to login: " + error.Error);
                 });
             };
         }
@@ -97,6 +97,19 @@ namespace Foxscore.EasyLogin
             };
         }
 
+        public static KeyringManager GetKeyringManager(IEncryptionLayer encryptionLayer)
+        {
+#if UNITY_EDITOR_WIN
+            return new WindowsCredentialKeyringManager(encryptionLayer);
+#elif UNITY_EDITOR_OSX
+            return new UnsecureCredentialsManager(encryptionLayer);
+#elif UNITY_EDITOR_LINUX
+            return new UnsecureCredentialsManager(encryptionLayer);
+#else
+            return new UnsecureCredentialsManager(encryptionLayer);
+#endif
+        }
+
         static Accounts()
         {
             if (Preferences.UseOriginalLoginSystem)
@@ -105,15 +118,13 @@ namespace Foxscore.EasyLogin
             CurrentUserProperty =
                 typeof(APIUser).GetProperty(nameof(APIUser.CurrentUser), BindingFlags.Public | BindingFlags.Static);
 
-#if UNITY_EDITOR_WIN
-            KeyringManager = new WindowsCredentialKeyringManager();
-#elif UNITY_EDITOR_OSX
-            KeyringManager = new UnsecureCredentialsManager();
-#elif UNITY_EDITOR_LINUX
-            KeyringManager = new UnsecureCredentialsManager();
-#else
-            KeyringManager = new UnsecureCredentialsManager();
-#endif
+            IEncryptionLayer encryptionLayer = Config.EncryptionLayerType switch
+            {
+                EncryptionLayerType.Basic => new BasicEncryption(),
+                EncryptionLayerType.Password => new PasswordEncryption(),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+            KeyringManager = GetKeyringManager(encryptionLayer);
 
             var currentUserId = SessionState.GetString(SessionKey_CurrentUserId, null);
             if (!string.IsNullOrWhiteSpace(currentUserId))
