@@ -43,7 +43,7 @@ namespace Foxscore.EasyLogin
 
         public static Texture2D GetFor(AccountStruct account)
         {
-            if (TextureCache.TryGetValue(GetCachedImagePath(account), out var texture))
+            if (TextureCache.TryGetValue(account.Id, out var texture))
                 return texture;
 
             var path = GetCachedImagePath(account);
@@ -51,7 +51,7 @@ namespace Foxscore.EasyLogin
             if (fileInfo.Exists && fileInfo.LastWriteTime >= DateTime.Now.AddHours(-1))
                 return TextureCache[account.Id] = LoadTextureFromDisk(path);
             
-            TextureCache[GetCachedImagePath(account)] = null;
+            TextureCache[account.Id] = null;
             new Task(() => DownloadImage(account)).Start();
             return null;
         }
@@ -77,7 +77,7 @@ namespace Foxscore.EasyLogin
                         fileStream.Close();
                         EditorApplication.delayCall += () =>
                         {
-                            TextureCache[GetCachedImagePath(account)] = LoadTextureFromDisk(imagePath);
+                            TextureCache[account.Id] = LoadTextureFromDisk(imagePath);
                             VRCSdkControlPanel.window.Repaint();
                         };
                     },
