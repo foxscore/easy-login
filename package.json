@@ -9,6 +9,10 @@
     "email": "felixkaiser2000@protonmail.com",
     "url": "https://foxscore.dev"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/foxscore/easy-login.git"
+  },
   "vpmDependencies": {
     "com.vrchat.base": "^3.5.0"
   }
