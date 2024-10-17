@@ -46,6 +46,12 @@ namespace Foxscore.EasyLogin
             CanCurrentAccountPublishAvatars = null;
             CanCurrentAccountPublishWorlds = null;
             var credentials = KeyringManager.Get(account.Id);
+            if (credentials == null)
+            {
+                Log.Warning($"Attempted to login with {account.Username}, but no valid credentials were found.");
+                return;
+            }
+            
             EditorApplication.delayCall += () =>
             {
                 VRCSdkControlPanel.window?.Repaint();
@@ -125,7 +131,13 @@ namespace Foxscore.EasyLogin
                 _ => throw new ArgumentOutOfRangeException()
             };
             KeyringManager = GetKeyringManager(encryptionLayer);
+            
+            if (encryptionLayer.IsUnlocked())
+                AttemptAutoLogin();
+        }
 
+        public static void AttemptAutoLogin()
+        {
             var currentUserId = SessionState.GetString(SessionKey_CurrentUserId, null);
             if (!string.IsNullOrWhiteSpace(currentUserId))
             {

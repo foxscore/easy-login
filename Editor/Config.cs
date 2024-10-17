@@ -7,6 +7,7 @@ using System.Threading;
 using System.Xml.Linq;
 using Newtonsoft.Json;
 using UnityEditor;
+using UnityEditor.Compilation;
 using UnityEngine.UIElements;
 using VRC.SDKBase.Editor.Api;
 using Debug = UnityEngine.Debug;
@@ -21,23 +22,27 @@ namespace Foxscore.EasyLogin
         [JsonProperty("version")] private int _version = 0;
         [JsonProperty("encryption")] private EncryptionLayerType _encryptionLayerType = EncryptionLayerType.Basic;
         [JsonProperty("encryptionCompare")] private string _encryptionCompare = null;
+        [JsonProperty("keepVaultUnlockedForSession")] private bool _keepVaultUnlockedForSession = true;
 
         private static Config _instance;
         private static readonly string ConfigPath;
         private static readonly FileSystemWatcher _watcher;
+        private static readonly object _lock = new();
 
-        public static int Version
-        {
-            get => _instance._version;
-            set
-            {
-                _instance._version = value;
-                Save();
-            }
-        }
+        public static int Version => _instance._version;
 
         public static EncryptionLayerType EncryptionLayerType => _instance._encryptionLayerType;
         public static string EncryptionCompare => _instance._encryptionCompare;
+
+        public static bool KeepVaultUnlockedForSession
+        {
+            get => _instance._keepVaultUnlockedForSession;
+            set
+            {
+                _instance._keepVaultUnlockedForSession = value;
+                Save();
+            }
+        }
 
         static Config()
         {
@@ -63,7 +68,8 @@ namespace Foxscore.EasyLogin
 
         public static void ChangeEncryptionMethod(
             IEncryptionLayer oldEncryptionLayer,
-            IEncryptionLayer newEncryptionLayer
+            IEncryptionLayer newEncryptionLayer,
+            bool reloadDomain = true
         )
         {
             var oldKeyring = Accounts.GetKeyringManager(oldEncryptionLayer);
@@ -73,6 +79,8 @@ namespace Foxscore.EasyLogin
             foreach (var id in ids)
             {
                 var tokens = oldKeyring.Get(id);
+                if (tokens == null)
+                    continue;
                 oldKeyring.Delete(id);
                 newKeyring.Set(id, tokens);
             }
@@ -84,8 +92,13 @@ namespace Foxscore.EasyLogin
                 _ => throw new ArgumentOutOfRangeException()
             };
             _instance._encryptionCompare = newEncryptionLayer.GetCompareString();
+            IEncryptionLayer.ClearSessionPassword();
             
             Save();
+            
+            Accounts.KeyringManager = Accounts.GetKeyringManager(newEncryptionLayer);
+            if (reloadDomain)
+                CompilationPipeline.RequestScriptCompilation();
         }
 
         public static IReadOnlyList<AccountStruct> GetAccounts() => _instance._accounts;
@@ -138,7 +151,11 @@ namespace Foxscore.EasyLogin
                 return;
             }
 
-            var json = File.ReadAllText(ConfigPath);
+            string json;
+            lock (_lock)
+            {
+                json = File.ReadAllText(ConfigPath);
+            }
             if (string.IsNullOrWhiteSpace(json))
             {
                 _instance = MakeDefault();
@@ -182,8 +199,10 @@ namespace Foxscore.EasyLogin
                 case 0:
 #if UNITY_EDITOR_WIN
                     Log.Info("Updating encryption for EasyLogin credentials...");
-                    ChangeEncryptionMethod(new NoEncryption(), new BasicEncryption());
-                    Log.Info("DONE!");
+                    ChangeEncryptionMethod(new NoEncryption(), new BasicEncryption(), false);
+                    _instance._version = 1;
+                    Save();
+                    CompilationPipeline.RequestScriptCompilation();
 #endif
                     break;
             }
@@ -193,8 +212,11 @@ namespace Foxscore.EasyLogin
 
         private static void Save()
         {
-            var json = JsonConvert.SerializeObject(_instance, Formatting.Indented);
-            File.WriteAllText(ConfigPath, json);
+            lock (_lock)
+            {
+                var json = JsonConvert.SerializeObject(_instance, Formatting.Indented);
+                File.WriteAllText(ConfigPath, json);
+            }
         }
     }
 }

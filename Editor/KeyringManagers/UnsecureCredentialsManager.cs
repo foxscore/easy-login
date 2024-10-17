@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Security.AccessControl;
 using UnityEditor;
 using System.Security.Cryptography;
+using System.Text;
 using Newtonsoft.Json;
 using Debug = UnityEngine.Debug;
 
@@ -12,15 +15,17 @@ namespace Foxscore.EasyLogin.KeyringManagers
 {
     public class UnsecureCredentialsManager : KeyringManager
     {
+        private static readonly object _lock = new();
+        
         private Dictionary<string, string> _creds = new();
-        private readonly string _configPath;
+        private readonly string _credsPath;
         private readonly FileSystemWatcher _watcher;
 
         public UnsecureCredentialsManager(IEncryptionLayer encryptionLayer) : base(encryptionLayer)
         {
             var elDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Fox_score", "EasyLogin");
-            _configPath = Path.Combine(elDir, "creds.json");
+            _credsPath = Path.Combine(elDir, "creds.json");
             if (!Directory.Exists(elDir))
                 Directory.CreateDirectory(elDir);
 
@@ -42,14 +47,18 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         private void Load()
         {
-            if (!File.Exists(_configPath))
+            if (!File.Exists(_credsPath))
             {
                 _creds = new();
                 Save();
                 return;
             }
 
-            var json = File.ReadAllText(_configPath);
+            string json;
+            lock (_lock)
+            {
+                json = File.ReadAllText(_credsPath);
+            }
             if (string.IsNullOrWhiteSpace(json))
             {
                 _creds = new();
@@ -64,15 +73,20 @@ namespace Foxscore.EasyLogin.KeyringManagers
             catch (Exception e)
             {
                 Debug.LogException(e);
-                var backupPath = _configPath + ".old";
-                if (File.Exists(backupPath)) File.Delete(backupPath);
-                File.Move(_configPath, backupPath);
-                _creds = new();
-                Save();
+                var backupPath = _credsPath + ".old";
+                lock (_lock)
+                {
+                    if (File.Exists(backupPath)) File.Delete(backupPath);
+                    File.Move(_credsPath, backupPath);
+                    _creds = new();
+                    Save();
+                }
+                var accounts = Config.GetAccounts().Select(a => a.Id).ToList();
+                accounts.ForEach(Config.RemoveAccount);
                 EditorApplication.delayCall += () =>
                 {
-                    if (!EditorUtility.DisplayDialog("Corrupted config file",
-                            $"Your EasyLogin file couldn't be loaded.\n\nWe made at backup and stored it at {backupPath}\n\nYour settings have been reset.",
+                    if (!EditorUtility.DisplayDialog("Corrupted credentials file",
+                            $"Your EasyLogin credentials file couldn't be loaded.\n\nWe made at backup and stored it at {backupPath}\n\nYour stored accounts have been reset.",
                             "Ok", "Open Folder"))
                     {
 #if UNITY_EDITOR_WIN
@@ -80,7 +94,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
 #elif UNITY_EDITOR_OSX
                         Process.Start("open", "-R " + ConfigPath);
 #elif UNITY_EDITOR_LINUX
-                        Process.Start("xdg-open", _configPath);
+                        Process.Start("xdg-open", _credsPath);
 #endif
                     }
                 };
@@ -89,8 +103,14 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         private void Save()
         {
-            var json = JsonConvert.SerializeObject(_creds, Formatting.Indented);
-            File.WriteAllText(_configPath, json);
+            lock (_lock)
+            {
+                var json = JsonConvert.SerializeObject(_creds, Formatting.Indented);
+                using var file = File.OpenWrite(_credsPath);
+                file.Write(Encoding.UTF8.GetBytes(json));
+                file.Flush();
+                file.Close();
+            } 
         }
 
         public override AuthTokens Get(string id)

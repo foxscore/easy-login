@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
 using System.Reflection;
+using System.Security.Principal;
+using Foxscore.EasyLogin.PopupWindows;
 using HarmonyLib;
 using JetBrains.Annotations;
 using UnityEditor;
+using UnityEditor.Compilation;
 using UnityEngine;
 using VRC.Core;
 using VRC.SDKBase.Editor;
@@ -43,6 +47,7 @@ namespace Foxscore.EasyLogin.Hooks
         }
 
         private static GUIStyle _warningLabelStyle;
+        private static string _vaultPassword = "";
 
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
@@ -117,6 +122,21 @@ namespace Foxscore.EasyLogin.Hooks
                 AuthSession.Render();
                 VRCSdkControlPanel.window.Repaint();
             }
+            // Vault not unlocked
+            else if (Accounts.CurrentAccount == null && !Accounts.KeyringManager.EncryptionLayer.IsUnlocked())
+            {
+                _vaultPassword = EditorGUILayout.PasswordField("Password", _vaultPassword);
+                if (GUILayout.Button("Unlock Vault"))
+                {
+                    if (Accounts.KeyringManager.EncryptionLayer.Unlock(_vaultPassword))
+                        Accounts.AttemptAutoLogin();
+                    else
+                        EditorUtility.DisplayDialog("Easy Login", "Failed to unlock vault. Please try again. If the problem persists, try different passwords or contact us.", "OK");
+                    GUI.FocusControl(null);
+                    _vaultPassword = string.Empty;
+                }
+            }
+            // Vault unlocked, no account selected
             else if (Accounts.CurrentAccount == null)
             {
                 Rect buttonRect;
@@ -133,22 +153,31 @@ namespace Foxscore.EasyLogin.Hooks
 
                     if (GUI.Button(buttonRect, "", "helpbox"))
                     {
-                        new Task(() => API.VerifyTokens(Accounts.KeyringManager.Get(account.Id),
-                            () => { Accounts.SetCurrentAccount(account); }, () =>
+                        new Task(() =>
+                        {
+                            try
                             {
-                                EditorApplication.delayCall += () =>
-                                {
-                                    // ToDo: Change to in-window popup instead of dialog
-                                    if (EditorUtility.DisplayDialog(
-                                            "Easy Login",
-                                            "Sessions expired. Please login again.",
-                                            "Ok", "Not now"))
-                                        AuthSession = new AuthSession(account);
-                                };
-                            }, error => { Log.Error("Failed to verify credentials: " + error); })).Start();
+                                API.VerifyTokens(Accounts.KeyringManager.Get(account.Id),
+                                    () => { Accounts.SetCurrentAccount(account); }, () =>
+                                    {
+                                        EditorApplication.delayCall += () =>
+                                        {
+                                            // ToDo: Change to in-window popup instead of dialog
+                                            if (EditorUtility.DisplayDialog(
+                                                    "Easy Login",
+                                                    "Sessions expired. Please login again.",
+                                                    "Ok", "Not now"))
+                                                AuthSession = new AuthSession(account);
+                                        };
+                                    }, error => { Log.Error("Failed to verify credentials: " + error); });
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogException(e);
+                            }
+                        }).Start();
                     }
 
-                    // TODO: Load profile picture
                     if ((icon = ProfilePictureCache.GetFor(account)) != null)
                     {
                         GUI.DrawTexture(iconRect, icon);
@@ -220,7 +249,38 @@ namespace Foxscore.EasyLogin.Hooks
                 });
 
                 EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
+
+                if (Accounts.KeyringManager.EncryptionLayer is PasswordEncryption)
+                {
+                    buttonRect = EditorGUILayout.GetControlRect(false, 64, GUILayout.Width(400));
+                    iconRect = new Rect(buttonRect.x + 11, buttonRect.y + 11, 42, 42);
+                    labelRect = new Rect(iconRect.xMax + 11, iconRect.y, 200, 42);
+
+                    if (GUI.Button(buttonRect, "", "helpbox"))
+                    {
+                        IEncryptionLayer.ClearSessionPassword();
+                        CompilationPipeline.RequestScriptCompilation();
+                    }
+
+                    icon = Icons.Lock;
+                    GUI.DrawTexture(iconRect, icon);
+
+                    GUI.Label(labelRect, "Lock vault", new GUIStyle()
+                    {
+                        fontSize = 24,
+                        alignment = TextAnchor.MiddleLeft,
+                        normal =
+                        {
+                            textColor = EditorGUIUtility.isProSkin
+                                ? new Color(0.6862745098f, 0.6862745098f, 0.6862745098f)
+                                : new Color(0.008f, 0.008f, 0.008f)
+                        }
+                    });
+
+                    EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
+                }
             }
+            // Account selected
             else
             {
                 EditorGUILayout.BeginHorizontal();
@@ -302,6 +362,8 @@ namespace Foxscore.EasyLogin.Hooks
                 }
             }
 
+            EditorGUILayout.Space();
+
             var styleValue = Preferences.ProfilePictureStyle;
             var newStyleValue = (StyleOption) EditorGUILayout.EnumPopup("Profile picture style", styleValue);
             if (styleValue != newStyleValue) Preferences.ProfilePictureStyle = newStyleValue;
@@ -314,6 +376,48 @@ namespace Foxscore.EasyLogin.Hooks
                     var newRadiusValue = EditorGUILayout.Slider("Rounded radius", radiusValue, 0, 0.5f);
                     if (!Mathf.Approximately(radiusValue, newRadiusValue))
                         Preferences.ProfilePictureRadius = newRadiusValue;
+                }
+            }
+
+            EditorGUILayout.Space();
+
+            EditorGUILayout.LabelField("Master-Password Protection");
+            using (new EditorGUI.IndentLevelScope())
+            {
+                using (new EditorGUI.DisabledScope(Config.EncryptionLayerType is not EncryptionLayerType.Password))
+                {
+                    var newKeepVaultOpen = EditorGUILayout.ToggleLeft(
+                        new GUIContent(
+                            "Keep vault unlocked *",
+                            "You will still have to unlock it whenever you open Unity, just not while this Unity instance is open.\n\nIf this options was previously disabled, then it will only take effect upon the next reload."
+                        ),
+                        Config.KeepVaultUnlockedForSession
+                    );
+                    if (newKeepVaultOpen != Config.KeepVaultUnlockedForSession)
+                    {
+                        Config.KeepVaultUnlockedForSession = newKeepVaultOpen;
+                        if (!newKeepVaultOpen)
+                            IEncryptionLayer.ClearSessionPassword();
+                    }
+                }
+                
+                switch (Config.EncryptionLayerType)
+                {
+                    case EncryptionLayerType.Basic:
+                        var buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
+                        if (GUI.Button(buttonRect, "Enable Master-Password Protection"))
+                            PopupWindow.Show(buttonRect, new EnableMasterPasswordEncryptionPopup(buttonRect.width));
+                        break;
+                    case EncryptionLayerType.Password:
+                        buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
+                        if (GUI.Button(buttonRect, "Disable Master-Password Protection"))
+                            PopupWindow.Show(buttonRect, new EnableBasicEncryptionPopup(buttonRect.width));
+                        break;
+                    default:
+                        EditorGUILayout.HelpBox(
+                            $"UNKNOWN DATA ENCRYPTION TYPE ({Config.EncryptionLayerType})\nManual intervention required! Contact the developer if necessary.",
+                            MessageType.Warning, true);
+                        break;
                 }
             }
 

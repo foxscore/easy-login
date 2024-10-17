@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using JetBrains.Annotations;
+using UnityEditor;
 
 namespace Foxscore.EasyLogin
 {
@@ -24,6 +25,28 @@ namespace Foxscore.EasyLogin
         
         public string Encrypt(string value);
         public string Decrypt(string value);
+
+        private const string SessionPasswordKey = "Foxscore_EasyLogin::VaultPassword";
+        
+        public static void ClearSessionPassword() => SessionState.EraseString(SessionPasswordKey);
+        
+        protected static void SetSessionPassword(string password) {
+            if (Config.KeepVaultUnlockedForSession)
+                SessionState.SetString(
+                    SessionPasswordKey,
+                    new BasicEncryption().Encrypt(password)
+                );
+        }
+
+        protected static string GetSessionPassword()
+        {
+            if (!Config.KeepVaultUnlockedForSession) return null;
+            
+            var passwd = SessionState.GetString(SessionPasswordKey, null);
+            return string.IsNullOrWhiteSpace(passwd)
+                ? null
+                : new BasicEncryption().Decrypt(passwd);
+        }
     }
     
     public static class EncryptionLayerExtensions {
@@ -96,14 +119,25 @@ namespace Foxscore.EasyLogin
     public class PasswordEncryption : IEncryptionLayer
     {
         private string _password;
-        
-        public bool IsUnlocked() => _password != null;
+
+        public bool IsUnlocked()
+        {
+            if (_password is not null)
+                return true;
+
+            var vaultPassword = IEncryptionLayer.GetSessionPassword();
+            return vaultPassword is not null && Unlock(vaultPassword);
+        }
 
         public bool Unlock(string password)
         {
             Setup(password);
             if (GetCompareString() == Config.EncryptionCompare)
+            {
+                IEncryptionLayer.SetSessionPassword(password);
                 return true;
+            }
+            IEncryptionLayer.ClearSessionPassword();
             _password = null;
             return false;
         }
@@ -148,7 +182,7 @@ namespace Foxscore.EasyLogin
             var cipherBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
 
 
-            return Convert.ToBase64String(cipherBytes) + "|" + Convert.ToBase64String(salt);
+            return Convert.ToBase64String(cipherBytes) + "|" + Convert.ToBase64String(salt) + "|" + Convert.ToBase64String(aes.IV);
         }
 
         public string Decrypt(string value)
