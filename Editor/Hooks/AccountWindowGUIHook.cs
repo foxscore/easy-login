@@ -52,7 +52,7 @@ namespace Foxscore.EasyLogin.Hooks
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
         {
-            if (Preferences.UseOriginalLoginSystem)
+            if (!Config.Enabled)
             {
                 const int padding = 11;
                 const int height = 42;
@@ -336,7 +336,7 @@ namespace Foxscore.EasyLogin.Hooks
             return false;
         }
 
-        private static StyleOption Preferences_IconStyle = Preferences.ProfilePictureStyle;
+        private static StyleOption Preferences_IconStyle = Config.ProfilePictureStyle;
         private static void SettingPostfix()
         {
             EditorGUILayout.Separator();
@@ -350,11 +350,11 @@ namespace Foxscore.EasyLogin.Hooks
             }
             EditorGUILayout.EndHorizontal();
 
-            var value = Preferences.UseOriginalLoginSystem;
+            var value = !Config.Enabled;
             var newValue = EditorGUILayout.ToggleLeft("Use original login system", value);
             if (value != newValue)
             {
-                Preferences.UseOriginalLoginSystem = newValue;
+                Config.Enabled = !newValue;
                 if (newValue == false)
                 {
                     ApiCredentials.Clear();
@@ -364,18 +364,32 @@ namespace Foxscore.EasyLogin.Hooks
 
             EditorGUILayout.Space();
 
-            var styleValue = Preferences.ProfilePictureStyle;
-            var newStyleValue = (StyleOption) EditorGUILayout.EnumPopup("Profile picture style", styleValue);
-            if (styleValue != newStyleValue) Preferences.ProfilePictureStyle = newStyleValue;
+            // * Creating this element manually instead of using EditorGUILayout.EnumField works more consistently on GNOME systems
+            var styleValue = Config.ProfilePictureStyle;
+            var rect = EditorGUILayout.GetControlRect(false, 18);
+            var labelRect = new Rect(rect.x, rect.y, EditorGUIUtility.labelWidth, rect.height);
+            var buttonRect = new Rect(labelRect.xMax, rect.y, rect.width - labelRect.width, rect.height);
+            EditorGUI.LabelField(labelRect, "Profile picture style");
+            if (EditorGUI.DropdownButton(buttonRect, new GUIContent(ObjectNames.NicifyVariableName(styleValue.ToString())), FocusType.Keyboard))
+            {
+                var menu = new GenericMenu();
+                foreach (var @enum in Enum.GetNames(typeof(StyleOption)))
+                    menu.AddItem(
+                        new GUIContent(ObjectNames.NicifyVariableName(@enum)),
+                        Config.ProfilePictureStyle.ToString() == @enum,
+                        () => Config.ProfilePictureStyle = (StyleOption)Enum.Parse(typeof(StyleOption), @enum)
+                    );
+                menu.ShowAsContext();
+            };
 
             using (new EditorGUI.IndentLevelScope())
             {
                 using (new EditorGUI.DisabledScope(styleValue != StyleOption.Rounded))
                 {
-                    var radiusValue = Preferences.ProfilePictureRadius;
+                    var radiusValue = Config.ProfilePictureRadius;
                     var newRadiusValue = EditorGUILayout.Slider("Rounded radius", radiusValue, 0, 0.5f);
                     if (!Mathf.Approximately(radiusValue, newRadiusValue))
-                        Preferences.ProfilePictureRadius = newRadiusValue;
+                        Config.ProfilePictureRadius = newRadiusValue;
                 }
             }
 
@@ -404,7 +418,7 @@ namespace Foxscore.EasyLogin.Hooks
                 switch (Config.EncryptionLayerType)
                 {
                     case EncryptionLayerType.Basic:
-                        var buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
+                        buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
                         if (GUI.Button(buttonRect, "Enable Master-Password Protection"))
                             PopupWindow.Show(buttonRect, new EnableMasterPasswordEncryptionPopup(buttonRect.width));
                         break;
@@ -426,13 +440,13 @@ namespace Foxscore.EasyLogin.Hooks
         
         private static void DrawMask(Rect rect, float gradient)
         {
-            switch (Preferences.ProfilePictureStyle)
+            switch (Config.ProfilePictureStyle)
             {
                 case StyleOption.Square:
                     return;
                 
                 case StyleOption.Rounded:
-                    DrawRoundedCornerMask(rect, gradient, Preferences.ProfilePictureRadius * rect.width);
+                    DrawRoundedCornerMask(rect, gradient, Config.ProfilePictureRadius * rect.width);
                     break;
                 
                 case StyleOption.Circular:

@@ -118,7 +118,7 @@ namespace Foxscore.EasyLogin
 
         static Accounts()
         {
-            if (Preferences.UseOriginalLoginSystem)
+            if (!Config.Enabled)
                 ApiCredentials.Clear();
             
             CurrentUserProperty =
