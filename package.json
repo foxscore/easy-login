@@ -4,6 +4,7 @@
   "version": "1.0.0-beta.2",
   "description": "Allows you to be logged in across multiple projects with multiple accounts.",
   "unity": "2022.3",
+  "license": "GPL-3.0-or-later",
   "author": {
     "name": "Fox_score",
     "email": "felixkaiser2000@protonmail.com",
