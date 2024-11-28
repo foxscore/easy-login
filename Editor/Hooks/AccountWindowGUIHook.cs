@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using Foxscore.EasyLogin.PopupWindows;
@@ -48,12 +49,19 @@ namespace Foxscore.EasyLogin.Hooks
 
         private static GUIStyle _warningLabelStyle;
         private static string _vaultPassword = "";
+        private static bool _bestHttpIsSetup = false;
 
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
         {
             if (!Config.Enabled)
             {
+                if (!_bestHttpIsSetup)
+                {
+                    BestHTTP.HTTPManager.Setup();
+                    _bestHttpIsSetup = true;
+                }
+                
                 const int padding = 11;
                 const int height = 42;
 
@@ -145,7 +153,7 @@ namespace Foxscore.EasyLogin.Hooks
                 Texture icon;
 
                 var accounts = Config.GetAccounts();
-                foreach (var account in accounts)
+                foreach (var account in accounts.OrderBy(a => a.DisplayName))
                 {
                     buttonRect = EditorGUILayout.GetControlRect(false, 64, GUILayout.Width(400 - 64 - 2));
                     iconRect = new Rect(buttonRect.x + 11, buttonRect.y + 11, 42, 42);

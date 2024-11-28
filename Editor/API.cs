@@ -90,7 +90,7 @@ namespace Foxscore.EasyLogin
                 var request = CreateRequest(Endpoint + "auth/user", HTTPMethods.Get, null);
                 request.SetHeader("Authorization", "Basic " + Convert.ToBase64String(
                     Encoding.UTF8.GetBytes(
-                        WebUtility.UrlEncode(username) + ':' + WebUtility.UrlEncode(password)
+                        Uri.EscapeDataString(username) + ':' + Uri.EscapeDataString(password)
                     )
                 ));
                 var response = request.SendAndAwait();

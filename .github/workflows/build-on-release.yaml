@@ -35,7 +35,7 @@ jobs:
         echo "::set-output name=is_prerelease::$([[ "${{ env.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(.+)$ ]] && echo true || echo false)"
 
     - name: Create Package Zip
-      run: zip -r "/tmp/${{ env.zipFile }}" .
+      run: zip -x '.git/*' '.github/*' -r "/tmp/${{ env.zipFile }}" .
 
     - name: Create UnityPackage
       uses: foxscore/make-unitypackage@cbd3def23d6c9910b56e726b193c2363e5ca6adc
