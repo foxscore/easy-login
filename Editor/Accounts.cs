@@ -118,6 +118,9 @@ namespace Foxscore.EasyLogin
 
         static Accounts()
         {
+            if (!PlatformUtils.IsPlatformSupported())
+                return;
+
             if (!Config.Enabled)
                 ApiCredentials.Clear();
             
