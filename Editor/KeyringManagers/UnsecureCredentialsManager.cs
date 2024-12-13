@@ -92,7 +92,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
 #if UNITY_EDITOR_WIN
                         Process.Start("explorer.exe", "/select," + backupPath.Replace("/", "\\"));
 #elif UNITY_EDITOR_OSX
-                        Process.Start("open", "-R " + ConfigPath);
+                        Process.Start("open", "-R " + _credsPath);
 #elif UNITY_EDITOR_LINUX
                         Process.Start("xdg-open", _credsPath);
 #endif
