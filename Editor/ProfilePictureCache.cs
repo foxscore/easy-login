@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -15,6 +15,7 @@ namespace Foxscore.EasyLogin
 
         static ProfilePictureCache()
         {
+            BestHTTPSetup.Setup();
             if (Directory.Exists(ProfilePictureCacheDirectory)) return;
             var parts = Path.GetFullPath(ProfilePictureCacheDirectory).Replace('\\', '/').Split('/');
             var currentPath = parts[0];

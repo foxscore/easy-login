@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Reflection;
 using Foxscore.EasyLogin.PopupWindows;
@@ -47,18 +47,13 @@ namespace Foxscore.EasyLogin.Hooks
 
         private static GUIStyle _warningLabelStyle;
         private static string _vaultPassword = "";
-        private static bool _bestHttpIsSetup = false;
 
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
         {
             if (!Config.Enabled)
             {
-                if (!_bestHttpIsSetup)
-                {
-                    BestHTTP.HTTPManager.Setup();
-                    _bestHttpIsSetup = true;
-                }
+                BestHTTPSetup.Setup();
                 
                 const int padding = 11;
                 const int height = 42;

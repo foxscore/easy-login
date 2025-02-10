@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using BestHTTP;
@@ -40,6 +40,7 @@ namespace Foxscore.EasyLogin
         {
             MacAddress = SystemInfo.deviceUniqueIdentifier;
             UnityVersion = Application.unityVersion;
+            BestHTTPSetup.Setup();
         }
 
         private static HTTPRequest CreateRequest(string apiEndpoint, HTTPMethods method, AuthTokens authTokens, bool hasBody = false)
