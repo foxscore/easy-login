@@ -1,18 +1,12 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Text;
 using BestHTTP;
 using Foxscore.EasyLogin.Extensions;
 using Foxscore.EasyLogin.KeyringManagers;
-using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
-
-using VrcApi =  VRC.Core.API;
 
 namespace Foxscore.EasyLogin
 {

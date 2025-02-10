@@ -1,17 +1,12 @@
-﻿using System;
-using System.Drawing;
-using System.IO;
+using System;
 using System.Linq;
 using System.Reflection;
-using System.Security.Principal;
 using Foxscore.EasyLogin.PopupWindows;
 using HarmonyLib;
-using JetBrains.Annotations;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
 using VRC.Core;
-using VRC.SDKBase.Editor;
 using Color = UnityEngine.Color;
 using FontStyle = UnityEngine.FontStyle;
 using Task = System.Threading.Tasks.Task;

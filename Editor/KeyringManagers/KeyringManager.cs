@@ -2,7 +2,6 @@
 
 using Newtonsoft.Json;
 // ReSharper disable once CheckNamespace
-using BestHTTP.Cookies;
 
 namespace Foxscore.EasyLogin.KeyringManagers
 {

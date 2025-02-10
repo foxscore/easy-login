@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Reflection;
-using System.Text;
-using BestHTTP;
 using BestHTTP.Cookies;
 using HarmonyLib;
 using UnityEditor;
-using UnityEngine;
 
 namespace Foxscore.EasyLogin.Hooks
 {

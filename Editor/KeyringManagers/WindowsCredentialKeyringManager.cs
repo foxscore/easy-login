@@ -1,9 +1,5 @@
 ﻿#if UNITY_EDITOR_WIN
-using System;
-using BestHTTP.Cookies;
 using CredentialManagement;
-using Newtonsoft.Json;
-using UnityEngine;
 
 // ReSharper disable once CheckNamespace
 namespace Foxscore.EasyLogin.KeyringManagers

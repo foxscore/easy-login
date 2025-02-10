@@ -1,6 +1,3 @@
-using System.Runtime.InteropServices;
-using UnityEditor;
-
 namespace Foxscore.EasyLogin
 {
     public static class PlatformUtils

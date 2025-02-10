@@ -1,9 +1,7 @@
 using System;
-using System.Buffers.Text;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using JetBrains.Annotations;
 using UnityEditor;
 
 namespace Foxscore.EasyLogin

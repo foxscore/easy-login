@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using BestHTTP.SecureProtocol.Org.BouncyCastle.Asn1.X509.Qualified;
 using Newtonsoft.Json.Linq;
-using UnityEngine;
 
 namespace Foxscore.EasyLogin.Extensions
 {

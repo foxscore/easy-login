@@ -1,14 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
-using Foxscore.EasyLogin.Hooks;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Networking;
 using Directory = UnityEngine.Windows.Directory;
 
 namespace Foxscore.EasyLogin

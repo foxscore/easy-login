@@ -3,14 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
-using System.Xml.Linq;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
-using UnityEngine.UIElements;
-using VRC.SDKBase.Editor.Api;
 using Debug = UnityEngine.Debug;
 
 // ReSharper disable once CheckNamespace

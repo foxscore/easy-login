@@ -1,11 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using Foxscore.EasyLogin.Hooks;
 using Foxscore.EasyLogin.KeyringManagers;
-using Newtonsoft.Json;
-using UnityEngine;
 using UnityEditor;
 using VRC.Core;
 
