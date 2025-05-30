@@ -27,7 +27,7 @@ namespace Foxscore.EasyLogin
     public delegate void OnError(string error);
 
     [InitializeOnLoad]
-    public static class API
+    public static partial class API
     {
         public const string Endpoint = "https://api.vrchat.cloud/api/1/";
         private const string UserAgent = "VRC.Core.BestHTTP";
@@ -46,6 +46,9 @@ namespace Foxscore.EasyLogin
         private static HTTPRequest CreateRequest(string apiEndpoint, HTTPMethods method, AuthTokens authTokens, bool hasBody = false)
         {
             var request = new HTTPRequest(new Uri(apiEndpoint), method);
+            request.ConnectTimeout = TimeSpan.FromSeconds(3);
+            Proxy.Install(request);
+            
             request.OnBeforeHeaderSend += req =>
             {
                 req.RemoveHeader("Cookie");
