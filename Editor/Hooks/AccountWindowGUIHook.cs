@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using Foxscore.EasyLogin.PopupWindows;
@@ -46,7 +46,9 @@ namespace Foxscore.EasyLogin.Hooks
         }
 
         private static GUIStyle _warningLabelStyle;
+        private static bool _foldoutAdvancedProxySettings;
         private static string _vaultPassword = "";
+        private static Vector2 _settingsScrollPos = Vector2.zero;
 
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
@@ -132,7 +134,9 @@ namespace Foxscore.EasyLogin.Hooks
                     if (Accounts.KeyringManager.EncryptionLayer.Unlock(_vaultPassword))
                         Accounts.AttemptAutoLogin();
                     else
-                        EditorUtility.DisplayDialog("Easy Login", "Failed to unlock vault. Please try again. If the problem persists, try different passwords or contact us.", "OK");
+                        EditorUtility.DisplayDialog("Easy Login",
+                            "Failed to unlock vault. Please try again. If the problem persists, try different passwords or contact us.",
+                            "OK");
                     GUI.FocusControl(null);
                     _vaultPassword = string.Empty;
                 }
@@ -338,124 +342,291 @@ namespace Foxscore.EasyLogin.Hooks
         }
 
         private static StyleOption Preferences_IconStyle = Config.ProfilePictureStyle;
+
         private static void SettingPostfix()
         {
-            EditorGUILayout.Separator();
-            EditorGUILayout.BeginVertical(VRCSdkControlPanel.boxGuiStyle);
-
-            EditorGUILayout.BeginHorizontal();
+            _settingsScrollPos = EditorGUILayout.BeginScrollView(_settingsScrollPos);
             {
-                EditorGUILayout.LabelField("Easy Login", EditorStyles.boldLabel);
-                GUILayout.FlexibleSpace();
-                GUILayout.Label("Made with \u2665 by Fox_score");
-            }
-            EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Separator();
+                EditorGUILayout.BeginVertical(VRCSdkControlPanel.boxGuiStyle);
 
-            var value = !Config.Enabled;
-            var newValue = EditorGUILayout.ToggleLeft("Use original login system", value);
-            if (value != newValue)
-            {
-                Config.Enabled = !newValue;
-                if (newValue == false)
+                EditorGUILayout.BeginHorizontal();
                 {
-                    ApiCredentials.Clear();
-                    Accounts.ClearCurrentAccount();
+                    EditorGUILayout.LabelField("Easy Login", EditorStyles.boldLabel);
+                    GUILayout.FlexibleSpace();
+                    GUILayout.Label("Made with \u2665 by Fox_score");
                 }
-            }
+                EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.Space();
-
-            // * Creating this element manually instead of using EditorGUILayout.EnumField works more consistently on GNOME systems
-            var styleValue = Config.ProfilePictureStyle;
-            var rect = EditorGUILayout.GetControlRect(false, 18);
-            var labelRect = new Rect(rect.x, rect.y, EditorGUIUtility.labelWidth, rect.height);
-            var buttonRect = new Rect(labelRect.xMax, rect.y, rect.width - labelRect.width, rect.height);
-            EditorGUI.LabelField(labelRect, "Profile picture style");
-            if (EditorGUI.DropdownButton(buttonRect, new GUIContent(ObjectNames.NicifyVariableName(styleValue.ToString())), FocusType.Keyboard))
-            {
-                var menu = new GenericMenu();
-                foreach (var @enum in Enum.GetNames(typeof(StyleOption)))
-                    menu.AddItem(
-                        new GUIContent(ObjectNames.NicifyVariableName(@enum)),
-                        Config.ProfilePictureStyle.ToString() == @enum,
-                        () => Config.ProfilePictureStyle = (StyleOption)Enum.Parse(typeof(StyleOption), @enum)
-                    );
-                menu.ShowAsContext();
-            };
-
-            using (new EditorGUI.IndentLevelScope())
-            {
-                using (new EditorGUI.DisabledScope(styleValue != StyleOption.Rounded))
+                var value = !Config.Enabled;
+                var newValue = EditorGUILayout.ToggleLeft("Use original login system", value);
+                if (value != newValue)
                 {
-                    var radiusValue = Config.ProfilePictureRadius;
-                    var newRadiusValue = EditorGUILayout.Slider("Rounded radius", radiusValue, 0, 0.5f);
-                    if (!Mathf.Approximately(radiusValue, newRadiusValue))
-                        Config.ProfilePictureRadius = newRadiusValue;
-                }
-            }
-
-            EditorGUILayout.Space();
-
-            EditorGUILayout.LabelField("Master-Password Protection");
-            using (new EditorGUI.IndentLevelScope())
-            {
-                using (new EditorGUI.DisabledScope(Config.EncryptionLayerType is not EncryptionLayerType.Password))
-                {
-                    var newKeepVaultOpen = EditorGUILayout.ToggleLeft(
-                        new GUIContent(
-                            "Keep vault unlocked *",
-                            "You will still have to unlock it whenever you open Unity, just not while this Unity instance is open.\n\nIf this options was previously disabled, then it will only take effect upon the next reload."
-                        ),
-                        Config.KeepVaultUnlockedForSession
-                    );
-                    if (newKeepVaultOpen != Config.KeepVaultUnlockedForSession)
+                    Config.Enabled = !newValue;
+                    if (newValue == false)
                     {
-                        Config.KeepVaultUnlockedForSession = newKeepVaultOpen;
-                        if (!newKeepVaultOpen)
-                            IEncryptionLayer.ClearSessionPassword();
+                        ApiCredentials.Clear();
+                        Accounts.ClearCurrentAccount();
                     }
                 }
-                
-                switch (Config.EncryptionLayerType)
-                {
-                    case EncryptionLayerType.Basic:
-                        buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
-                        if (GUI.Button(buttonRect, "Enable Master-Password Protection"))
-                            PopupWindow.Show(buttonRect, new EnableMasterPasswordEncryptionPopup(buttonRect.width));
-                        break;
-                    case EncryptionLayerType.Password:
-                        buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
-                        if (GUI.Button(buttonRect, "Disable Master-Password Protection"))
-                            PopupWindow.Show(buttonRect, new EnableBasicEncryptionPopup(buttonRect.width));
-                        break;
-                    default:
-                        EditorGUILayout.HelpBox(
-                            $"UNKNOWN DATA ENCRYPTION TYPE ({Config.EncryptionLayerType})\nManual intervention required! Contact the developer if necessary.",
-                            MessageType.Warning, true);
-                        break;
-                }
-            }
-            
-            // TODO Add Proxy Settings
 
-            EditorGUILayout.EndVertical();
+                EditorGUILayout.Space();
+
+                // * Creating this element manually instead of using EditorGUILayout.EnumField works more consistently on GNOME systems
+                var styleValue = Config.ProfilePictureStyle;
+                var rect = EditorGUILayout.GetControlRect(false, 18);
+                var labelRect = new Rect(rect.x, rect.y, EditorGUIUtility.labelWidth, rect.height);
+                var buttonRect = new Rect(labelRect.xMax, rect.y, rect.width - labelRect.width, rect.height);
+                EditorGUI.LabelField(labelRect, "Profile picture style");
+                if (EditorGUI.DropdownButton(buttonRect,
+                        new GUIContent(ObjectNames.NicifyVariableName(styleValue.ToString())), FocusType.Keyboard))
+                {
+                    var menu = new GenericMenu();
+                    foreach (var @enum in Enum.GetNames(typeof(StyleOption)))
+                        menu.AddItem(
+                            new GUIContent(ObjectNames.NicifyVariableName(@enum)),
+                            Config.ProfilePictureStyle.ToString() == @enum,
+                            () => Config.ProfilePictureStyle = (StyleOption)Enum.Parse(typeof(StyleOption), @enum)
+                        );
+                    menu.ShowAsContext();
+                }
+
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    using (new EditorGUI.DisabledScope(styleValue != StyleOption.Rounded))
+                    {
+                        var radiusValue = Config.ProfilePictureRadius;
+                        var newRadiusValue = EditorGUILayout.Slider("Rounded radius", radiusValue, 0, 0.5f);
+                        if (!Mathf.Approximately(radiusValue, newRadiusValue))
+                            Config.ProfilePictureRadius = newRadiusValue;
+                    }
+                }
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Master-Password Protection");
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    using (new EditorGUI.DisabledScope(Config.EncryptionLayerType is not EncryptionLayerType.Password))
+                    {
+                        var newKeepVaultOpen = EditorGUILayout.ToggleLeft(
+                            new GUIContent(
+                                "Keep vault unlocked *",
+                                "You will still have to unlock it whenever you open Unity, just not while this Unity instance is open.\n\nIf this options was previously disabled, then it will only take effect upon the next reload."
+                            ),
+                            Config.KeepVaultUnlockedForSession
+                        );
+                        if (newKeepVaultOpen != Config.KeepVaultUnlockedForSession)
+                        {
+                            Config.KeepVaultUnlockedForSession = newKeepVaultOpen;
+                            if (!newKeepVaultOpen)
+                                IEncryptionLayer.ClearSessionPassword();
+                        }
+                    }
+
+                    switch (Config.EncryptionLayerType)
+                    {
+                        case EncryptionLayerType.Basic:
+                            buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
+                            if (GUI.Button(buttonRect, "Enable Master-Password Protection"))
+                                PopupWindow.Show(buttonRect, new EnableMasterPasswordEncryptionPopup(buttonRect.width));
+                            break;
+                        case EncryptionLayerType.Password:
+                            buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
+                            if (GUI.Button(buttonRect, "Disable Master-Password Protection"))
+                                PopupWindow.Show(buttonRect, new EnableBasicEncryptionPopup(buttonRect.width));
+                            break;
+                        default:
+                            EditorGUILayout.HelpBox(
+                                $"UNKNOWN DATA ENCRYPTION TYPE ({Config.EncryptionLayerType})\nManual intervention required! Contact the developer if necessary.",
+                                MessageType.Warning, true);
+                            break;
+                    }
+                }
+
+                EditorGUILayout.Space();
+                using (var changeScope = new EditorGUI.ChangeCheckScope())
+                {
+                    var proxy = Config.Proxy;
+
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        proxy.scope = EnumDropdown(
+                            new GUIContent("Proxy"),
+                            proxy.scope,
+                            v => v switch
+                            {
+                                ProxyScope.Disabled => "Disabled",
+                                ProxyScope.Internal => "Only for Easy Login",
+                                ProxyScope.GlobalPatch => "Use Unity wide",
+                                _ => throw new ArgumentOutOfRangeException(nameof(v), v, null)
+                            }
+                        );
+
+                        using (new EditorGUI.DisabledScope(proxy.scope is ProxyScope.Disabled))
+                            proxy.source = EnumDropdown(
+                                null,
+                                proxy.source,
+                                v => v switch
+                                {
+                                    ProxySource.System => "Automatic",
+                                    ProxySource.Custom => "Manual",
+                                    _ => throw new ArgumentOutOfRangeException(nameof(v), v, null)
+                                },
+                                GUILayout.Width(92)
+                            );
+                    }
+
+                    if (!EditorPrefs.GetBool("Foxscore_EasyLogin::HideTorWarning", false) &&
+                        proxy.scope is not ProxyScope.Disabled)
+                    {
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            rect = EditorGUILayout.GetControlRect(false, 38);
+                            const int buttonWidth = 92;
+                            const int padding = 3;
+                            var helpBoxRect = new Rect(
+                                rect.x,
+                                rect.y,
+                                rect.width - (buttonWidth + padding),
+                                rect.height
+                            );
+                            buttonRect = new Rect(
+                                helpBoxRect.xMax + 2,
+                                rect.y,
+                                buttonWidth,
+                                rect.height
+                            );
+
+                            EditorGUI.HelpBox(
+                                helpBoxRect,
+                                "Do not use a TOR proxy!\nVRChat is actively rejecting requests coming from the TOR network.",
+                                MessageType.Warning
+                            );
+                            if (GUI.Button(
+                                    buttonRect,
+                                    "Dismiss"
+                                ))
+                                EditorPrefs.SetBool("Foxscore_EasyLogin::HideTorWarning", true);
+                        }
+                    }
+
+                    if (proxy is { scope: not ProxyScope.Disabled, source: ProxySource.Custom })
+                    {
+                        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                        using (new EditorGUI.IndentLevelScope())
+                        {
+                            proxy.type = EnumDropdown(
+                                new GUIContent("Type"),
+                                proxy.type,
+                                t => t switch
+                                {
+                                    ProxyType.Http => "HTTP | HTTPS | FTP",
+                                    ProxyType.Socks => "SOCKS",
+                                    _ => throw new ArgumentOutOfRangeException(nameof(t), t, null)
+                                }
+                            );
+                            proxy.address = EditorGUILayout.TextField(
+                                new GUIContent("Address", "<b>Example</b>\nsocks://localhost:9150"),
+                                proxy.address
+                            );
+
+                            EditorGUILayout.Space();
+
+                            proxy.useAuthentication = EditorGUILayout.Toggle(
+                                "Use Authentication",
+                                proxy.useAuthentication
+                            );
+                            using (new EditorGUI.IndentLevelScope())
+                            using (new EditorGUI.DisabledScope(!proxy.useAuthentication))
+                            {
+                                proxy.username = EditorGUILayout.TextField(
+                                    "Username",
+                                    proxy.username
+                                );
+                                proxy.password = EditorGUILayout.PasswordField(
+                                    "Password",
+                                    proxy.password
+                                );
+                            }
+
+                            EditorGUILayout.Space();
+
+                            _foldoutAdvancedProxySettings =
+                                EditorGUILayout.Foldout(_foldoutAdvancedProxySettings, "Advanced", true);
+                            if (_foldoutAdvancedProxySettings)
+                                using (new EditorGUI.IndentLevelScope())
+                                {
+                                    using (new EditorGUI.DisabledScope(!proxy.useAuthentication))
+                                        proxy.authenticationType = EnumDropdown(
+                                            new GUIContent("Authentication Type"),
+                                            proxy.authenticationType,
+                                            v => v.ToString()
+                                        );
+
+
+                                    using (new EditorGUI.DisabledScope(proxy.type is not ProxyType.Http))
+                                    {
+                                        EditorGUILayout.LabelField("HTTP Proxy");
+                                        using (new EditorGUI.IndentLevelScope())
+                                        {
+                                            proxy.isTransparent =
+                                                EditorGUILayout.ToggleLeft("Is transparent", proxy.isTransparent);
+                                            proxy.sendWholeUrl =
+                                                EditorGUILayout.ToggleLeft("Send whole URL", proxy.sendWholeUrl);
+                                            proxy.nonTransparentForHttps =
+                                                EditorGUILayout.ToggleLeft("Non-transparent for HTTPS",
+                                                    proxy.nonTransparentForHttps);
+                                        }
+                                    }
+                                }
+                        }
+                    }
+
+                    if (changeScope.changed)
+                        Config.Proxy = proxy;
+                }
+
+                EditorGUILayout.EndVertical();
+            }
+            EditorGUILayout.EndScrollView();
         }
-        
+
+        private static T EnumDropdown<T>(GUIContent content, T value,
+            Func<T, string> valueNameResolver = null, params GUILayoutOption[] options) where T : Enum
+        {
+            var values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
+            var names = (valueNameResolver == null
+                    ? Enum.GetNames(typeof(T)).Select(ObjectNames.NicifyVariableName)
+                    : values.Select(valueNameResolver)
+                )
+                .Select(n => new GUIContent(n))
+                .ToArray();
+
+            return values[
+                EditorGUILayout.Popup(
+                    content,
+                    Array.IndexOf(values, value),
+                    names,
+                    options
+                )
+            ];
+        }
+
         private static void DrawMask(Rect rect, float gradient)
         {
             switch (Config.ProfilePictureStyle)
             {
                 case StyleOption.Square:
                     return;
-                
+
                 case StyleOption.Rounded:
                     DrawRoundedCornerMask(rect, gradient, Config.ProfilePictureRadius * rect.width);
                     break;
-                
+
                 case StyleOption.Circular:
                     DrawCircularMask(rect, gradient);
                     break;
-                
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -497,19 +668,23 @@ namespace Foxscore.EasyLogin.Hooks
                     // Adjust corner distance based on corner position to ensure correct rounding direction
                     if (x <= cornerRadius && y <= cornerRadius)
                     {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) + Mathf.Pow(y + 1 - cornerRadius, 2));
+                        cornerDist =
+                            Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) + Mathf.Pow(y + 1 - cornerRadius, 2));
                     }
                     else if (x >= rect.width - cornerRadius && y <= cornerRadius)
                     {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) + Mathf.Pow(y + 1 - cornerRadius, 2));
+                        cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) +
+                                                Mathf.Pow(y + 1 - cornerRadius, 2));
                     }
                     else if (x <= cornerRadius && y >= rect.height - cornerRadius)
                     {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) + Mathf.Pow(y - (rect.height - cornerRadius), 2));
+                        cornerDist = Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) +
+                                                Mathf.Pow(y - (rect.height - cornerRadius), 2));
                     }
                     else if (x >= rect.width - cornerRadius && y >= rect.height - cornerRadius)
                     {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) + Mathf.Pow(y - (rect.height - cornerRadius), 2));
+                        cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) +
+                                                Mathf.Pow(y - (rect.height - cornerRadius), 2));
                     }
 
                     // Determine alpha based on distance from the nearest corner

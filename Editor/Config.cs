@@ -20,11 +20,17 @@ namespace Foxscore.EasyLogin
         Circular = 2,
     }
 
-    public enum ProxyMode
+    public enum ProxyScope
     {
         Disabled,
-        System,
-        Custom,
+        Internal,
+        GlobalPatch,
+    }
+
+    public enum ProxySource
+    {
+        System = 1,
+        Custom = 2,
     }
 
     public enum ProxyType
@@ -36,8 +42,9 @@ namespace Foxscore.EasyLogin
     [Serializable]
     public sealed class ProxySettings
     {
-        public ProxyMode mode = ProxyMode.System;
-        public ProxyType type;
+        public ProxyScope scope = ProxyScope.Internal;
+        public ProxySource source = ProxySource.System;
+        public ProxyType type = ProxyType.Socks;
         public string address;
 
         #region Only for http proxies
@@ -49,7 +56,7 @@ namespace Foxscore.EasyLogin
         #endregion
 
         public bool useAuthentication;
-        public AuthenticationTypes authenticationType;
+        public AuthenticationTypes authenticationType = AuthenticationTypes.Basic;
         public string username;
         public string password;
     }
@@ -70,7 +77,7 @@ namespace Foxscore.EasyLogin
 
         [JsonProperty("proxy")] private ProxySettings _proxy = new()
         {
-            mode = ProxyMode.System,
+            source = ProxySource.System,
         };
 
         [JsonProperty("accounts")] private readonly List<AccountStruct> _accounts = new();

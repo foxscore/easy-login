@@ -33,7 +33,8 @@ namespace Foxscore.EasyLogin
                 var proxySettings = Config.Proxy;
                 switch (proxySettings)
                 {
-                    case { mode: ProxyMode.Custom }:
+                    case { source: ProxySource.Custom }:
+                        Debug.Log(proxySettings.useAuthentication);
                         var credentials = proxySettings.useAuthentication
                             ? new Credentials(proxySettings.authenticationType, proxySettings.username,
                                 proxySettings.password)
@@ -52,12 +53,10 @@ namespace Foxscore.EasyLogin
                         };
                         break;
 
-                    case { mode: ProxyMode.System }:
+                    case { source: ProxySource.System }:
                         foreach (var envVariable in ProxyEnvironmentVariables)
                         {
                             var envValue = Environment.GetEnvironmentVariable(envVariable);
-                            if (!string.IsNullOrEmpty(envValue))
-                                Debug.Log($"{envVariable} = {envValue}");
                             if (!string.IsNullOrEmpty(envValue) && TryScanAndInstall(request, envVariable, envValue))
                                 return;
 
@@ -126,7 +125,7 @@ namespace Foxscore.EasyLogin
 
                 var settings = new ProxySettings
                 {
-                    mode = ProxyMode.System,
+                    source = ProxySource.System,
                     // Set HTTP proxy defaults
                     isTransparent = false,
                     sendWholeUrl = true,
@@ -217,7 +216,7 @@ namespace Foxscore.EasyLogin
                     
                     var settings = new ProxySettings
                     {
-                        mode = ProxyMode.System,
+                        source = ProxySource.System,
                         isTransparent = false,
                         sendWholeUrl = true,
                         nonTransparentForHttps = true,
