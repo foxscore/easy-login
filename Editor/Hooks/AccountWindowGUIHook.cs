@@ -435,6 +435,8 @@ namespace Foxscore.EasyLogin.Hooks
                         break;
                 }
             }
+            
+            // TODO Add Proxy Settings
 
             EditorGUILayout.EndVertical();
         }

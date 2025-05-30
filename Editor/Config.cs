@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using BestHTTP.Authentication;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Compilation;
@@ -19,32 +20,76 @@ namespace Foxscore.EasyLogin
         Circular = 2,
     }
 
+    public enum ProxyMode
+    {
+        Disabled,
+        System,
+        Custom,
+    }
+
+    public enum ProxyType
+    {
+        Http,
+        Socks,
+    }
+
+    [Serializable]
+    public sealed class ProxySettings
+    {
+        public ProxyMode mode = ProxyMode.System;
+        public ProxyType type;
+        public string address;
+
+        #region Only for http proxies
+
+        public bool isTransparent = false;
+        public bool sendWholeUrl = true;
+        public bool nonTransparentForHttps = true;
+
+        #endregion
+
+        public bool useAuthentication;
+        public AuthenticationTypes authenticationType;
+        public string username;
+        public string password;
+    }
+
     [InitializeOnLoad]
     public class Config
     {
         [JsonProperty("enabled")] private bool _enabled = true;
-        [JsonProperty("version")] private int _version = 0;
+        [JsonProperty("version")] private int _version;
         [JsonProperty("profilePictureStyle")] private StyleOption _profilePictureStyle = StyleOption.Rounded;
         [JsonProperty("profilePictureRadius")] private float _profilePictureRadius = 0.25f;
-        [JsonProperty("keepVaultUnlockedForSession")] private bool _keepVaultUnlockedForSession = true;
-        
+
+        [JsonProperty("keepVaultUnlockedForSession")]
+        private bool _keepVaultUnlockedForSession = true;
+
         [JsonProperty("encryption")] private EncryptionLayerType _encryptionLayerType = EncryptionLayerType.Basic;
         [JsonProperty("encryptionCompare")] private string _encryptionCompare = null;
-        
+
+        [JsonProperty("proxy")] private ProxySettings _proxy = new()
+        {
+            mode = ProxyMode.System,
+        };
+
         [JsonProperty("accounts")] private readonly List<AccountStruct> _accounts = new();
 
         private static Config _instance;
         private static readonly string ConfigPath;
-        private static readonly FileSystemWatcher _watcher;
-        private static readonly object _lock = new();
+        private static readonly FileSystemWatcher Watcher;
+        private static readonly object Lock = new();
 
-        public static bool Enabled {
+        public static bool Enabled
+        {
             get => _instance._enabled;
-            set {
+            set
+            {
                 _instance._enabled = value;
                 Save();
             }
         }
+
         public static int Version => _instance._version;
 
         public static EncryptionLayerType EncryptionLayerType => _instance._encryptionLayerType;
@@ -60,17 +105,32 @@ namespace Foxscore.EasyLogin
             }
         }
 
-        public static StyleOption ProfilePictureStyle {
+        public static StyleOption ProfilePictureStyle
+        {
             get => _instance._profilePictureStyle;
-            set {
+            set
+            {
                 _instance._profilePictureStyle = value;
                 Save();
             }
         }
-        public static float ProfilePictureRadius {
+
+        public static float ProfilePictureRadius
+        {
             get => _instance._profilePictureRadius;
-            set {
+            set
+            {
                 _instance._profilePictureRadius = Mathf.Clamp(value, 0, 0.5f);
+                Save();
+            }
+        }
+
+        public static ProxySettings Proxy
+        {
+            get => _instance._proxy;
+            set
+            {
+                _instance._proxy = value;
                 Save();
             }
         }
@@ -85,16 +145,16 @@ namespace Foxscore.EasyLogin
 
             Load();
 
-            _watcher = new FileSystemWatcher(elDir, "config.json");
-            _watcher.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite |
-                                    NotifyFilters.FileName | NotifyFilters.DirectoryName;
-            _watcher.Changed += OnFileWatcherFoundChange;
-            _watcher.Created += OnFileWatcherFoundChange;
-            _watcher.Deleted += OnFileWatcherFoundChange;
-            _watcher.Renamed += OnFileWatcherFoundChange;
-            _watcher.EnableRaisingEvents = true;
+            Watcher = new FileSystemWatcher(elDir, "config.json");
+            Watcher.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite |
+                                   NotifyFilters.FileName | NotifyFilters.DirectoryName;
+            Watcher.Changed += OnFileWatcherFoundChange;
+            Watcher.Created += OnFileWatcherFoundChange;
+            Watcher.Deleted += OnFileWatcherFoundChange;
+            Watcher.Renamed += OnFileWatcherFoundChange;
+            Watcher.EnableRaisingEvents = true;
 
-            AssemblyReloadEvents.beforeAssemblyReload += () => _watcher.EnableRaisingEvents = false;
+            AssemblyReloadEvents.beforeAssemblyReload += () => Watcher.EnableRaisingEvents = false;
         }
 
         public static void ChangeEncryptionMethod(
@@ -124,9 +184,9 @@ namespace Foxscore.EasyLogin
             };
             _instance._encryptionCompare = newEncryptionLayer.GetCompareString();
             IEncryptionLayer.ClearSessionPassword();
-            
+
             Save();
-            
+
             Accounts.KeyringManager = Accounts.GetKeyringManager(newEncryptionLayer);
             if (reloadDomain)
                 CompilationPipeline.RequestScriptCompilation();
@@ -183,10 +243,11 @@ namespace Foxscore.EasyLogin
             }
 
             string json;
-            lock (_lock)
+            lock (Lock)
             {
                 json = File.ReadAllText(ConfigPath);
             }
+
             if (string.IsNullOrWhiteSpace(json))
             {
                 _instance = MakeDefault();
@@ -224,9 +285,11 @@ namespace Foxscore.EasyLogin
             }
 
             #region Version upgrades
+
             var currentVersion = Version;
-            
-            if (Version == 0) {
+
+            if (Version == 0)
+            {
 #if UNITY_EDITOR_WIN
                 Log.Info("Updating encryption for EasyLogin credentials...");
                 ChangeEncryptionMethod(new NoEncryption(), new BasicEncryption(), false);
@@ -235,32 +298,42 @@ namespace Foxscore.EasyLogin
                 _instance._version = 1;
                 Save();
             }
-            
-            if (Version == 1) {
-                if (EditorPrefs.HasKey("Foxscore_EasyLogin::UseOriginalLoginSystem")) {
+
+            if (Version == 1)
+            {
+                if (EditorPrefs.HasKey("Foxscore_EasyLogin::UseOriginalLoginSystem"))
+                {
                     _instance._enabled = !EditorPrefs.GetBool("Foxscore_EasyLogin::UseOriginalLoginSystem", false);
                 }
-                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureStyle")) {
-                    _instance._profilePictureStyle = (StyleOption) EditorPrefs.GetInt("Foxscore_EasyLogin::ProfilePictureStyle", (int)StyleOption.Rounded);
+
+                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureStyle"))
+                {
+                    _instance._profilePictureStyle =
+                        (StyleOption)EditorPrefs.GetInt("Foxscore_EasyLogin::ProfilePictureStyle",
+                            (int)StyleOption.Rounded);
                 }
-                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureRadius")) {
+
+                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureRadius"))
+                {
                     _instance._profilePictureRadius = Mathf.Clamp(
                         EditorPrefs.GetFloat("Foxscore_EasyLogin::ProfilePictureRadius", 0.25f),
                         0, 0.5f
                     );
                 }
+
                 _instance._version = 2;
                 Save();
             }
 
             if (currentVersion != Version)
                 CompilationPipeline.RequestScriptCompilation();
+
             #endregion
         }
 
         private static void Save()
         {
-            lock (_lock)
+            lock (Lock)
             {
                 var json = JsonConvert.SerializeObject(_instance, Formatting.Indented);
                 File.WriteAllText(ConfigPath, json);
