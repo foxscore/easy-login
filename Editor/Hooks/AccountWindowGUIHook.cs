@@ -47,6 +47,7 @@ namespace Foxscore.EasyLogin.Hooks
 
         private static GUIStyle _warningLabelStyle;
         private static string _vaultPassword = "";
+        private static Vector2 _scrollPosition;
 
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
@@ -140,6 +141,9 @@ namespace Foxscore.EasyLogin.Hooks
             // Vault unlocked, no account selected
             else if (Accounts.CurrentAccount == null)
             {
+                using var scrollScope = new ScopedVerticalOnlyScrollView(_scrollPosition);
+                _scrollPosition = scrollScope.ScrollPosition;
+                
                 Rect buttonRect;
                 Rect iconRect;
                 Rect labelRect;
