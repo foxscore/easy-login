@@ -1,6 +1,20 @@
-﻿# Changelog
+# Changelog
 
-## [1.0.4-beta.1] - 2025-06-19
+## [1.0.5] - 2025-09-11
+
+### ADDED
+
+- Optional Installation: Added automatic installation option for the `dev.pardeike.harmony` package if the ARM platform is detected and the current Harmony version is incompatible ([#11](https://github.com/foxscore/easy-login/issues/11))
+
+### CHANGED
+
+- Improved ARM detection to be universal across platforms
+
+### FIXED
+
+- Fixed missing imports in `PlatformUtils.cs` ([#10](https://github.com/foxscore/easy-login/issues/10))
+
+## [1.0.4] - 2025-06-19
 
 ### ADDED
 
