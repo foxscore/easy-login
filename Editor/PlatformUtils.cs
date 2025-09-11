@@ -35,12 +35,12 @@ namespace Foxscore.EasyLogin
             EditorApplication.delayCall += () =>
             {
                 if (EditorUtility.DisplayDialog(
-                        "Unsupported platform",
-                        "You are attempting to use the ARM version of Unity.\n\n" +
-                        "Due to the currently installed version of the Harmony library not supporting this yet, neither Easy Login nor many other packages will work properly.\n\n" +
-                        "Try using the non-ARM version of Unity to possibly circumvent this issue, or replacing the Harmony version VRChat is providing with your own and restarting Unity.\n\n" +
-                        "Or we can automatically install a community build of Harmony with the required minimum version, that can be easily un-installed when VRChat upgrades their version." +
-                        $"Installed: {typeof(Harmony).Assembly.GetName().Version}\nMinimum: 2.4.0.0",
+                        "Incompatible Library",
+                        "Warning: You are currently using the Unity Editor for ARM64.\n\n" +
+                        "The version of Harmony Library installed in this project is unsupported on this platform. Easy Login, and other packages may fail to work correctly.\n\n" +
+                        "This package offers the choice to install a community build of Harmony, which may be uninstalled at any time.\n\n" +
+                        "Otherwise, please use the Intel version of Unity, or manually install a compatible version of Harmony for .NET 4.5.2.\n\n" +
+                        $"Harmony Version: {typeof(Harmony).Assembly.GetName().Version} | Minimum Required: 2.4.0.0\n",
                         ok: "Install community build",
                         cancel: "Ignore for this session"
                     ))
@@ -116,8 +116,12 @@ namespace Foxscore.EasyLogin
 
             Log.Info("Successfully downloaded and extracted VRCHarmony!");
 
-            AssetDatabase.Refresh();
-            CompilationPipeline.RequestScriptCompilation();
+            EditorUtility.DisplayDialog(
+                "Restart Required",
+                "The Unity Editor will now restart to finish importing libraries.",
+                "Continue"
+            );
+            EditorApplication.OpenProject(Directory.GetCurrentDirectory());
         }
     }
 }
