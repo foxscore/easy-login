@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using Foxscore.EasyLogin.PopupWindows;
+using Foxscore.EasyLogin.Services;
 using HarmonyLib;
 using UnityEditor;
 using UnityEditor.Compilation;
@@ -46,9 +47,44 @@ namespace Foxscore.EasyLogin.Hooks
         }
 
         private static GUIStyle _warningLabelStyle;
+        private static GUIStyle _motdMessageStyle;
         private static string _vaultPassword = "";
         private static Vector2 _scrollPosition;
 
+        private static void DrawMotd()
+        {
+            var motdMessages = MotdService.MotdMessages;
+            if (motdMessages.Any(m => m.ShouldShow()))
+            {
+                _motdMessageStyle ??= new("label")
+                {
+                    richText = true,
+                    wordWrap = true,
+                };
+                using (new GUILayout.VerticalScope("helpbox", GUILayout.MaxWidth(400)))
+                {
+                    EditorGUILayout.LabelField("Server Message", EditorStyles.boldLabel);
+                    foreach (var message in motdMessages)
+                    {
+                        if (!message.ShouldShow())
+                            continue;
+                        
+                        EditorGUILayout.BeginHorizontal(GUI.skin.box);
+                        EditorGUILayout.LabelField(message.Message, _motdMessageStyle);
+                        if (
+                            message.AllowHiding &&
+                            GUILayout.Button("Hide", GUILayout.Width(40))
+                        )
+                        {
+                            message.HideMessage();   
+                        }
+                        EditorGUILayout.EndHorizontal();
+                    }
+                }
+                EditorGUILayout.Space();   
+            }
+        }
+        
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
         {
@@ -127,6 +163,7 @@ namespace Foxscore.EasyLogin.Hooks
             // Vault not unlocked
             else if (Accounts.CurrentAccount == null && !Accounts.KeyringManager.EncryptionLayer.IsUnlocked())
             {
+                DrawMotd();
                 _vaultPassword = EditorGUILayout.PasswordField("Password", _vaultPassword);
                 if (GUILayout.Button("Unlock Vault"))
                 {
@@ -141,6 +178,7 @@ namespace Foxscore.EasyLogin.Hooks
             // Vault unlocked, no account selected
             else if (Accounts.CurrentAccount == null)
             {
+                DrawMotd();
                 using var scrollScope = new ScopedVerticalOnlyScrollView(_scrollPosition);
                 _scrollPosition = scrollScope.ScrollPosition;
                 
@@ -288,6 +326,7 @@ namespace Foxscore.EasyLogin.Hooks
             // Account selected
             else
             {
+                DrawMotd();
                 EditorGUILayout.BeginHorizontal();
                 {
                     const int height = 28;
