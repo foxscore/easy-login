@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Foxscore.EasyLogin.PopupWindows;
+using Foxscore.EasyLogin.Services;
 using HarmonyLib;
 using UnityEditor;
 using UnityEditor.Compilation;
@@ -46,9 +48,44 @@ namespace Foxscore.EasyLogin.Hooks
         }
 
         private static GUIStyle _warningLabelStyle;
+        private static GUIStyle _motdMessageStyle;
         private static string _vaultPassword = "";
         private static Vector2 _scrollPosition;
 
+        private static void DrawMotd()
+        {
+            var motdMessages = MotdService.MotdMessages;
+            if (motdMessages.Any(m => m.ShouldShow()))
+            {
+                _motdMessageStyle ??= new("label")
+                {
+                    richText = true,
+                    wordWrap = true,
+                };
+                using (new GUILayout.VerticalScope("helpbox", GUILayout.MaxWidth(400)))
+                {
+                    EditorGUILayout.LabelField("Server Message", EditorStyles.boldLabel);
+                    foreach (var message in motdMessages)
+                    {
+                        if (!message.ShouldShow())
+                            continue;
+                        
+                        EditorGUILayout.BeginHorizontal(GUI.skin.box);
+                        EditorGUILayout.LabelField(message.Message, _motdMessageStyle);
+                        if (
+                            message.AllowHiding &&
+                            GUILayout.Button("Hide", GUILayout.Width(40))
+                        )
+                        {
+                            message.HideMessage();   
+                        }
+                        EditorGUILayout.EndHorizontal();
+                    }
+                }
+                EditorGUILayout.Space();   
+            }
+        }
+        
         // ReSharper disable once InconsistentNaming
         private static bool AccountPrefix()
         {
@@ -127,6 +164,7 @@ namespace Foxscore.EasyLogin.Hooks
             // Vault not unlocked
             else if (Accounts.CurrentAccount == null && !Accounts.KeyringManager.EncryptionLayer.IsUnlocked())
             {
+                DrawMotd();
                 _vaultPassword = EditorGUILayout.PasswordField("Password", _vaultPassword);
                 if (GUILayout.Button("Unlock Vault"))
                 {
@@ -141,6 +179,7 @@ namespace Foxscore.EasyLogin.Hooks
             // Vault unlocked, no account selected
             else if (Accounts.CurrentAccount == null)
             {
+                DrawMotd();
                 using var scrollScope = new ScopedVerticalOnlyScrollView(_scrollPosition);
                 _scrollPosition = scrollScope.ScrollPosition;
                 
@@ -288,6 +327,7 @@ namespace Foxscore.EasyLogin.Hooks
             // Account selected
             else
             {
+                DrawMotd();
                 EditorGUILayout.BeginHorizontal();
                 {
                     const int height = 28;
@@ -442,6 +482,48 @@ namespace Foxscore.EasyLogin.Hooks
 
             EditorGUILayout.EndVertical();
         }
+
+        private static class MaskCache
+        {
+            private static Texture2D _mask;
+
+            private static StyleOption _style = StyleOption.Square;
+            private static float _gradient = -1;
+            private static float? _cornerRadius;
+
+            public static Texture2D GetMask(StyleOption style, float gradient) => GetMask(style, gradient, null);
+            public static Texture2D GetMask(StyleOption style, float gradient, float? cornerRadius)
+            {
+                // ReSharper disable once PossibleInvalidOperationException
+                if (
+                    _mask is null ||
+                    _style != style ||
+                    !Mathf.Approximately(_gradient, gradient) ||
+                    _cornerRadius.HasValue != cornerRadius.HasValue ||
+                    (
+                        _cornerRadius.HasValue && !Mathf.Approximately(_cornerRadius.Value, cornerRadius.Value)
+                    )
+                )
+                {
+                    _mask = null;
+                    _style = style;
+                    _gradient = gradient;
+                    _cornerRadius = cornerRadius;
+                }
+                return _mask;
+            }
+
+            public static bool TryGetMask(StyleOption style, float gradient, float? cornerRadius, [MaybeNullWhen(false)] out Texture2D mask)
+            {
+                mask = GetMask(style, gradient, cornerRadius);
+                return mask is not null;
+            }
+
+            public static void SetMask(Texture2D mask)
+            {
+                _mask = mask;
+            }
+        }
         
         private static void DrawMask(Rect rect, float gradient)
         {
@@ -465,65 +547,76 @@ namespace Foxscore.EasyLogin.Hooks
 
         private static void DrawCircularMask(Rect rect, float gradient)
         {
-            var radius = Mathf.Floor(rect.width / 2f) - 0.5f;
-            var mask = new Texture2D((int)rect.width, (int)rect.height);
-            var pixels = new Color[mask.width * mask.height];
-            for (var y = 0; y < mask.height; y++)
+            if (!MaskCache.TryGetMask(StyleOption.Circular, gradient, null, out var mask))
             {
-                for (var x = 0; x < mask.width; x++)
+                var radius = Mathf.Floor(rect.width / 2f) - 0.5f;
+                mask = new Texture2D((int)rect.width, (int)rect.height);
+                var pixels = new Color[mask.width * mask.height];
+                for (var y = 0; y < mask.height; y++)
                 {
-                    float dist = Mathf.Sqrt(Mathf.Pow(x - radius, 2) + Mathf.Pow(y - radius, 2));
-                    float alpha = dist > radius ? 1f : 1 - Mathf.Clamp01(radius - dist);
-                    pixels[y * mask.width + x] = new Color(gradient, gradient, gradient, alpha);
+                    for (var x = 0; x < mask.width; x++)
+                    {
+                        float dist = Mathf.Sqrt(Mathf.Pow(x - radius, 2) + Mathf.Pow(y - radius, 2));
+                        float alpha = dist > radius ? 1f : 1 - Mathf.Clamp01(radius - dist);
+                        pixels[y * mask.width + x] = new Color(gradient, gradient, gradient, alpha);
+                    }
                 }
-            }
 
-            mask.SetPixels(pixels);
-            mask.Apply();
+                mask.SetPixels(pixels);
+                mask.Apply();
+
+                MaskCache.SetMask(mask);
+            }
 
             GUI.DrawTexture(rect, mask);
         }
 
         private static void DrawRoundedCornerMask(Rect rect, float gradient, float cornerRadius)
         {
-            var mask = new Texture2D((int)rect.width, (int)rect.height);
-            var pixels = new Color[mask.width * mask.height];
-
-            for (var y = 0; y < mask.height; y++)
+            if (!MaskCache.TryGetMask(StyleOption.Rounded, gradient, cornerRadius, out var mask))
             {
-                for (var x = 0; x < mask.width; x++)
+                mask = new Texture2D((int)rect.width, (int)rect.height);
+                var pixels = new Color[mask.width * mask.height];
+
+                for (var y = 0; y < mask.height; y++)
                 {
-                    // Calculate distance from the nearest corner
-                    float cornerDist = 0;
+                    for (var x = 0; x < mask.width; x++)
+                    {
+                        // Calculate distance from the nearest corner
+                        float cornerDist = 0;
 
-                    // Adjust corner distance based on corner position to ensure correct rounding direction
-                    if (x <= cornerRadius && y <= cornerRadius)
-                    {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) + Mathf.Pow(y + 1 - cornerRadius, 2));
-                    }
-                    else if (x >= rect.width - cornerRadius && y <= cornerRadius)
-                    {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) + Mathf.Pow(y + 1 - cornerRadius, 2));
-                    }
-                    else if (x <= cornerRadius && y >= rect.height - cornerRadius)
-                    {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) + Mathf.Pow(y - (rect.height - cornerRadius), 2));
-                    }
-                    else if (x >= rect.width - cornerRadius && y >= rect.height - cornerRadius)
-                    {
-                        cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) + Mathf.Pow(y - (rect.height - cornerRadius), 2));
-                    }
+                        // Adjust corner distance based on corner position to ensure correct rounding direction
+                        if (x <= cornerRadius && y <= cornerRadius)
+                        {
+                            cornerDist = Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) + Mathf.Pow(y + 1 - cornerRadius, 2));
+                        }
+                        else if (x >= rect.width - cornerRadius && y <= cornerRadius)
+                        {
+                            cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) + Mathf.Pow(y + 1 - cornerRadius, 2));
+                        }
+                        else if (x <= cornerRadius && y >= rect.height - cornerRadius)
+                        {
+                            cornerDist = Mathf.Sqrt(Mathf.Pow(x + 1 - cornerRadius, 2) + Mathf.Pow(y - (rect.height - cornerRadius), 2));
+                        }
+                        else if (x >= rect.width - cornerRadius && y >= rect.height - cornerRadius)
+                        {
+                            cornerDist = Mathf.Sqrt(Mathf.Pow(x - (rect.width - cornerRadius), 2) + Mathf.Pow(y - (rect.height - cornerRadius), 2));
+                        }
 
-                    // Determine alpha based on distance from the nearest corner
-                    var alpha = cornerDist >= cornerRadius ? 1f : 1 - Mathf.Clamp01(cornerRadius - cornerDist);
+                        // Determine alpha based on distance from the nearest corner
+                        var alpha = cornerDist >= cornerRadius ? 1f : 1 - Mathf.Clamp01(cornerRadius - cornerDist);
 
-                    // Set pixel color based on alpha
-                    pixels[y * mask.width + x] = new Color(gradient, gradient, gradient, alpha);
+                        // Set pixel color based on alpha
+                        if (cornerDist >= 1)
+                            pixels[y * mask.width + x] = new Color(gradient, gradient, gradient, alpha);
+                    }
                 }
-            }
 
-            mask.SetPixels(pixels);
-            mask.Apply();
+                mask.SetPixels(pixels);
+                mask.Apply();
+                
+                MaskCache.SetMask(mask);
+            }
 
             GUI.DrawTexture(rect, mask);
         }
