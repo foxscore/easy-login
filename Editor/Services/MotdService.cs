@@ -86,7 +86,7 @@ namespace Foxscore.EasyLogin.Services
                 return false;
             if (ValidFrom.HasValue && ValidFrom.Value > DateTime.UtcNow)
                 return false;
-            if (ValidUntil.HasValue && ValidUntil < DateTime.UtcNow)
+            if (ValidUntil.HasValue && ValidUntil.Value < DateTime.UtcNow)
                 return false;
             return true;
         }

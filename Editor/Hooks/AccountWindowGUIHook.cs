@@ -547,7 +547,7 @@ namespace Foxscore.EasyLogin.Hooks
 
         private static void DrawCircularMask(Rect rect, float gradient)
         {
-            if (!MaskCache.TryGetMask(StyleOption.Rounded, gradient, null, out var mask))
+            if (!MaskCache.TryGetMask(StyleOption.Circular, gradient, null, out var mask))
             {
                 var radius = Mathf.Floor(rect.width / 2f) - 0.5f;
                 mask = new Texture2D((int)rect.width, (int)rect.height);
@@ -573,7 +573,7 @@ namespace Foxscore.EasyLogin.Hooks
 
         private static void DrawRoundedCornerMask(Rect rect, float gradient, float cornerRadius)
         {
-            if (!MaskCache.TryGetMask(StyleOption.Circular, gradient, cornerRadius, out var mask))
+            if (!MaskCache.TryGetMask(StyleOption.Rounded, gradient, cornerRadius, out var mask))
             {
                 mask = new Texture2D((int)rect.width, (int)rect.height);
                 var pixels = new Color[mask.width * mask.height];
