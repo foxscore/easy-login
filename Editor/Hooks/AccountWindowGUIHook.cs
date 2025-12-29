@@ -606,11 +606,11 @@ namespace Foxscore.EasyLogin.Hooks
                         // Determine alpha based on distance from the nearest corner
                         var alpha = cornerDist >= cornerRadius ? 1f : 1 - Mathf.Clamp01(cornerRadius - cornerDist);
 
-                    // Set pixel color based on alpha
-                    if (cornerDist >= 1)
-                        pixels[y * mask.width + x] = new Color(gradient, gradient, gradient, alpha);
+                        // Set pixel color based on alpha
+                        if (cornerDist >= 1)
+                            pixels[y * mask.width + x] = new Color(gradient, gradient, gradient, alpha);
+                    }
                 }
-            }
 
                 mask.SetPixels(pixels);
                 mask.Apply();
