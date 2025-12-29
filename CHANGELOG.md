@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.6-beta.1] - 2025-12-29
+
+### ADDED
+
+- Added MOTD's that can be published via the main branch of this packages repository.
+
+### FIXED
+
+- Fixed "Add to VCC" button in `README.md`. It does no longer open the image in a new tab, instead of opening the intended link.
+- Fixed an error where if the `Rounded Radius` for profile-pictures was set to a very low value, we would make the entire icon (partially) invisible.
+- Fixed us generating the profile-picture masks every single frame istead of caching them, leading to a memory leak due to how the Unity Editor handles temporary Texture2D instances.
+
+### CHANGED
+
+- Updated to a newer version of the `foxscore/make-unitypackage` action. The old version was not working correctly.
+
 ## [1.0.5] - 2025-09-11
 
 ### ADDED
