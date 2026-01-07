@@ -12,7 +12,7 @@ namespace Foxscore.EasyLogin.Services
 {
     public static class MotdService
     {
-#if FOYX_DEBUG
+#if FOXY_USE_LOCAL_MOTD
         private const string Url = "http://localhost:80/motd.json";
         private const double TimeBetweenUpdates = 1; // 1 Second
 #else
