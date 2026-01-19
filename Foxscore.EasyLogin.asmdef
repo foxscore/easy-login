@@ -4,7 +4,8 @@
     "references": [
         "GUID:3456780c4fb2d324ab9c633d6f1b0ddb",
         "GUID:6e9c6119ac4eb334284fb7b4bc6d1f05",
-        "GUID:f51ebe6a0ceec4240a699833d6309b23"
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:f2ff5576cd694b2ba53120bc8c1abbab"
     ],
     "includePlatforms": [
         "Editor"
@@ -18,7 +19,8 @@
         "Newtonsoft.Json.dll",
         "VRCCore-Editor.dll",
         "VRCSDKBase.dll",
-        "VRCSDKBase-Editor.dll"
+        "VRCSDKBase-Editor.dll",
+        "SemanticVersioning.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [],

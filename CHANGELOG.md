@@ -1,6 +1,12 @@
 # Changelog
 
-## [1.0.6-beta.2] - 2026.01.19
+## [1.0.6-beta.3] - 2026-01-19
+
+### ADDED
+
+- Added automatic update detection
+
+## [1.0.6-beta.2] - 2026-01-19
 
 ### FIXED
 

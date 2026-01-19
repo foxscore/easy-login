@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -43,15 +44,20 @@ namespace Foxscore.EasyLogin.Services
             };
         }
 
+#if FOXY_DEBUG
+        [MenuItem("Debug/Fetch MOTD")]
+        public static void FetchMotdMenuItem() => _ = FetchMotd();
+#endif
+        
         private static async Task FetchMotd()
         {
             try
             {
                 var rawPackageJson = await File.ReadAllTextAsync(Path.Combine(Application.dataPath, "..", "Packages", "dev.foxscore.easy-login", "package.json"));
-                var packageJson = JsonConvert.DeserializeObject<dynamic>(rawPackageJson);
+                var packageJson = JsonConvert.DeserializeObject<Abstract.PackageJson>(rawPackageJson);
                 
                 using var client = new HttpClient();
-                client.DefaultRequestHeaders.Add("X-EasyLogin-Version", packageJson.version as string);
+                client.SetEasyLoginUserAgent(packageJson.VersionString);
                 var rawJson = await client.GetStringAsync(Url);
                 var messages = JsonConvert.DeserializeObject<MotdMessage[]>(rawJson);
                 UpdateData(messages);
