@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.6-beta.2] - 2026.01.19
+
+### FIXED
+
+- Fixed an issue where the config / credentials file would reset due to a race condition
+
 ## [1.0.6-beta.1] - 2025-12-29
 
 ### ADDED

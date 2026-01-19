@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using Debug = UnityEngine.Debug;
 
@@ -13,86 +14,64 @@ namespace Foxscore.EasyLogin.KeyringManagers
 {
     public class UnsecureCredentialsManager : KeyringManager
     {
-        private static readonly object _lock = new();
+        private static readonly object Lock = new();
         
         private Dictionary<string, string> _creds = new();
-        private readonly string _credsPath;
-        private readonly FileSystemWatcher _watcher;
+        private readonly SafeFileHandler _fileHandler;
 
         public UnsecureCredentialsManager(IEncryptionLayer encryptionLayer) : base(encryptionLayer)
         {
             var elDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Fox_score", "EasyLogin");
-            _credsPath = Path.Combine(elDir, "creds.json");
+            var credsPath = Path.Combine(elDir, "creds.json");
             if (!Directory.Exists(elDir))
                 Directory.CreateDirectory(elDir);
 
-            Load();
-
-            _watcher = new FileSystemWatcher(elDir, "creds.json");
-            _watcher.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite |
-                                    NotifyFilters.FileName | NotifyFilters.DirectoryName;
-            _watcher.Changed += OnFileWatcherFoundChange;
-            _watcher.Created += OnFileWatcherFoundChange;
-            _watcher.Deleted += OnFileWatcherFoundChange;
-            _watcher.Renamed += OnFileWatcherFoundChange;
-            _watcher.EnableRaisingEvents = true;
-
-            AssemblyReloadEvents.beforeAssemblyReload += () => _watcher.EnableRaisingEvents = false;
+            _fileHandler = new SafeFileHandler(credsPath, Load);
+            Load(_fileHandler.ReadAllText());
         }
-        
-        private void OnFileWatcherFoundChange(object sender, FileSystemEventArgs e) => Load();
 
-        private void Load()
+        private void Load(string fileContent)
         {
-            if (!File.Exists(_credsPath))
+            if (string.IsNullOrEmpty(fileContent))
             {
-                _creds = new();
-                Save();
-                return;
-            }
-
-            string json;
-            lock (_lock)
-            {
-                json = File.ReadAllText(_credsPath);
-            }
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                _creds = new();
-                Save();
-                return;
+                Thread.Sleep(10);
+                fileContent = _fileHandler.ReadAllText();
+                if (string.IsNullOrEmpty(fileContent))
+                {
+                    // Now we know for sure that the credentials file is either empty or non-existent
+                    // * Write to log file(when implemented)
+                    _creds = new();
+                    Save();
+                    return;
+                }
             }
 
             try
             {
-                _creds = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                _creds = JsonConvert.DeserializeObject<Dictionary<string, string>>(fileContent);
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                var backupPath = _credsPath + ".old";
-                lock (_lock)
-                {
-                    if (File.Exists(backupPath)) File.Delete(backupPath);
-                    File.Move(_credsPath, backupPath);
-                    _creds = new();
-                    Save();
-                }
+                _fileHandler.MakeBackup();
+                _creds = new();
+                Save();
                 var accounts = Config.GetAccounts().Select(a => a.Id).ToList();
                 accounts.ForEach(Config.RemoveAccount);
                 EditorApplication.delayCall += () =>
                 {
                     if (!EditorUtility.DisplayDialog("Corrupted credentials file",
-                            $"Your EasyLogin credentials file couldn't be loaded.\n\nWe made at backup and stored it at {backupPath}\n\nYour stored accounts have been reset.",
+                            $"Your EasyLogin credentials file couldn't be loaded.\n\nWe made at backup and stored it at {_fileHandler.BackupPath}\n\nYour stored accounts have been reset.",
                             "Ok", "Open Folder"))
                     {
+                        var folder = Path.GetDirectoryName(_fileHandler.BackupPath)!;
 #if UNITY_EDITOR_WIN
-                        Process.Start("explorer.exe", "/select," + backupPath.Replace("/", "\\"));
+                        Process.Start("explorer.exe", "/select," + folder.Replace("/", "\\"));
 #elif UNITY_EDITOR_OSX
-                        Process.Start("open", "-R " + _credsPath);
+                        Process.Start("open", "-R " + folder);
 #elif UNITY_EDITOR_LINUX
-                        Process.Start("xdg-open", _credsPath);
+                        Process.Start("xdg-open", folder);
 #endif
                     }
                 };
@@ -101,13 +80,10 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         private void Save()
         {
-            lock (_lock)
+            lock (Lock)
             {
                 var json = JsonConvert.SerializeObject(_creds, Formatting.Indented);
-                using var file = File.OpenWrite(_credsPath);
-                file.Write(Encoding.UTF8.GetBytes(json));
-                file.Flush();
-                file.Close();
+                _fileHandler.WriteAllText(json);
             } 
         }
 
