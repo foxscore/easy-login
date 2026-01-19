@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Compilation;
@@ -26,25 +27,28 @@ namespace Foxscore.EasyLogin
         [JsonProperty("version")] private int _version = 0;
         [JsonProperty("profilePictureStyle")] private StyleOption _profilePictureStyle = StyleOption.Rounded;
         [JsonProperty("profilePictureRadius")] private float _profilePictureRadius = 0.25f;
-        [JsonProperty("keepVaultUnlockedForSession")] private bool _keepVaultUnlockedForSession = true;
-        
+
+        [JsonProperty("keepVaultUnlockedForSession")]
+        private bool _keepVaultUnlockedForSession = true;
+
         [JsonProperty("encryption")] private EncryptionLayerType _encryptionLayerType = EncryptionLayerType.Basic;
         [JsonProperty("encryptionCompare")] private string _encryptionCompare = null;
-        
+
         [JsonProperty("accounts")] private readonly List<AccountStruct> _accounts = new();
 
         private static Config _instance;
-        private static readonly string ConfigPath;
-        private static readonly FileSystemWatcher _watcher;
-        private static readonly object _lock = new();
+        private static readonly SafeFileHandler FileHandler;
 
-        public static bool Enabled {
+        public static bool Enabled
+        {
             get => _instance._enabled;
-            set {
+            set
+            {
                 _instance._enabled = value;
                 Save();
             }
         }
+
         public static int Version => _instance._version;
 
         public static EncryptionLayerType EncryptionLayerType => _instance._encryptionLayerType;
@@ -60,16 +64,21 @@ namespace Foxscore.EasyLogin
             }
         }
 
-        public static StyleOption ProfilePictureStyle {
+        public static StyleOption ProfilePictureStyle
+        {
             get => _instance._profilePictureStyle;
-            set {
+            set
+            {
                 _instance._profilePictureStyle = value;
                 Save();
             }
         }
-        public static float ProfilePictureRadius {
+
+        public static float ProfilePictureRadius
+        {
             get => _instance._profilePictureRadius;
-            set {
+            set
+            {
                 _instance._profilePictureRadius = Mathf.Clamp(value, 0, 0.5f);
                 Save();
             }
@@ -79,22 +88,12 @@ namespace Foxscore.EasyLogin
         {
             var elDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Fox_score", "EasyLogin");
-            ConfigPath = Path.Combine(elDir, "config.json");
+            var configPath = Path.Combine(elDir, "config.json");
             if (!Directory.Exists(elDir))
                 Directory.CreateDirectory(elDir);
 
-            Load();
-
-            _watcher = new FileSystemWatcher(elDir, "config.json");
-            _watcher.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite |
-                                    NotifyFilters.FileName | NotifyFilters.DirectoryName;
-            _watcher.Changed += OnFileWatcherFoundChange;
-            _watcher.Created += OnFileWatcherFoundChange;
-            _watcher.Deleted += OnFileWatcherFoundChange;
-            _watcher.Renamed += OnFileWatcherFoundChange;
-            _watcher.EnableRaisingEvents = true;
-
-            AssemblyReloadEvents.beforeAssemblyReload += () => _watcher.EnableRaisingEvents = false;
+            FileHandler = new SafeFileHandler(configPath, Load);
+            Load(FileHandler.ReadAllText());
         }
 
         public static void ChangeEncryptionMethod(
@@ -124,9 +123,9 @@ namespace Foxscore.EasyLogin
             };
             _instance._encryptionCompare = newEncryptionLayer.GetCompareString();
             IEncryptionLayer.ClearSessionPassword();
-            
+
             Save();
-            
+
             Accounts.KeyringManager = Accounts.GetKeyringManager(newEncryptionLayer);
             if (reloadDomain)
                 CompilationPipeline.RequestScriptCompilation();
@@ -162,71 +161,61 @@ namespace Foxscore.EasyLogin
             Save();
         }
 
-        private static void OnFileWatcherFoundChange(object sender, FileSystemEventArgs e)
-        {
-            // Debug.Log("Detected change in EasyLogin config, reloading...");
-            Load();
-        }
-
         private static Config MakeDefault() => new()
         {
-            _version = 1,
+            _version = 2,
         };
 
-        private static void Load()
+        private static void Load(string fileContent)
         {
-            if (!File.Exists(ConfigPath))
+            if (string.IsNullOrEmpty(fileContent))
             {
-                _instance = MakeDefault();
-                Save();
-                return;
-            }
-
-            string json;
-            lock (_lock)
-            {
-                json = File.ReadAllText(ConfigPath);
-            }
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                _instance = MakeDefault();
-                Save();
-                return;
+                Thread.Sleep(10);
+                fileContent = FileHandler.ReadAllText();
+                if (string.IsNullOrEmpty(fileContent))
+                {
+                    // Now we know for sure that the config file is either empty or non-existent
+                    // * Write to log file(when implemented)
+                    _instance = MakeDefault();
+                    Save();
+                    return;
+                }
             }
 
             try
             {
-                _instance = JsonConvert.DeserializeObject<Config>(json);
+                _instance = JsonConvert.DeserializeObject<Config>(fileContent);
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                var backupPath = ConfigPath + ".old";
-                if (File.Exists(backupPath)) File.Delete(backupPath);
-                File.Move(ConfigPath, backupPath);
+                FileHandler.MakeBackup();
                 _instance = MakeDefault();
                 Save();
                 EditorApplication.delayCall += () =>
                 {
                     if (!EditorUtility.DisplayDialog("Corrupted config file",
-                            $"Your EasyLogin file couldn't be loaded.\n\nWe made at backup and stored it at {backupPath}\n\nYour settings have been reset.",
+                            $"Your EasyLogin file couldn't be loaded.\n\nWe made at backup and stored it at {FileHandler.BackupPath}\n\nYour settings have been reset.",
                             "Ok", "Open Folder"))
                     {
+                        var folder = Path.GetDirectoryName(FileHandler.BackupPath)!;
 #if UNITY_EDITOR_WIN
-                        Process.Start("explorer.exe", "/select," + backupPath.Replace("/", "\\"));
+                        Process.Start("explorer.exe", "/select," + folder.Replace("/", "\\"));
 #elif UNITY_EDITOR_OSX
-                    Process.Start("open", "-R " + ConfigPath);
+                    Process.Start("open", "-R " + folder);
 #elif UNITY_EDITOR_LINUX
-                        Process.Start("xdg-open", ConfigPath);
+                        Process.Start("xdg-open", folder);
 #endif
                     }
                 };
             }
 
             #region Version upgrades
+
             var currentVersion = Version;
-            
-            if (Version == 0) {
+
+            if (Version == 0)
+            {
 #if UNITY_EDITOR_WIN
                 Log.Info("Updating encryption for EasyLogin credentials...");
                 ChangeEncryptionMethod(new NoEncryption(), new BasicEncryption(), false);
@@ -235,36 +224,43 @@ namespace Foxscore.EasyLogin
                 _instance._version = 1;
                 Save();
             }
-            
-            if (Version == 1) {
-                if (EditorPrefs.HasKey("Foxscore_EasyLogin::UseOriginalLoginSystem")) {
+
+            if (Version == 1)
+            {
+                if (EditorPrefs.HasKey("Foxscore_EasyLogin::UseOriginalLoginSystem"))
+                {
                     _instance._enabled = !EditorPrefs.GetBool("Foxscore_EasyLogin::UseOriginalLoginSystem", false);
                 }
-                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureStyle")) {
-                    _instance._profilePictureStyle = (StyleOption) EditorPrefs.GetInt("Foxscore_EasyLogin::ProfilePictureStyle", (int)StyleOption.Rounded);
+
+                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureStyle"))
+                {
+                    _instance._profilePictureStyle =
+                        (StyleOption)EditorPrefs.GetInt("Foxscore_EasyLogin::ProfilePictureStyle",
+                            (int)StyleOption.Rounded);
                 }
-                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureRadius")) {
+
+                if (EditorPrefs.HasKey("Foxscore_EasyLogin::ProfilePictureRadius"))
+                {
                     _instance._profilePictureRadius = Mathf.Clamp(
                         EditorPrefs.GetFloat("Foxscore_EasyLogin::ProfilePictureRadius", 0.25f),
                         0, 0.5f
                     );
                 }
+
                 _instance._version = 2;
                 Save();
             }
 
             if (currentVersion != Version)
                 CompilationPipeline.RequestScriptCompilation();
+
             #endregion
         }
 
         private static void Save()
         {
-            lock (_lock)
-            {
-                var json = JsonConvert.SerializeObject(_instance, Formatting.Indented);
-                File.WriteAllText(ConfigPath, json);
-            }
+            var json = JsonConvert.SerializeObject(_instance, Formatting.Indented);
+            FileHandler.WriteAllText(json);
         }
     }
 }
