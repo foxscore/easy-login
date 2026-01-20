@@ -63,9 +63,7 @@ namespace Foxscore.EasyLogin.Services
         {
             try
             {
-                var rawPackageJson = await File.ReadAllTextAsync(Path.Combine(Application.dataPath, "..", "Packages", "dev.foxscore.easy-login", "package.json"));
-                var packageJson = JsonConvert.DeserializeObject<Abstract.PackageJson>(rawPackageJson);
-                
+                var packageJson = Utils.GetPackageJson();
                 using var client = new HttpClient();
                 client.SetEasyLoginUserAgent(packageJson.VersionString);
                 var rawJson = await client.GetStringAsync(Url);
