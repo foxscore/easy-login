@@ -30,6 +30,8 @@ namespace Foxscore.EasyLogin
             // Setup file watcher
             var directory = Path.GetDirectoryName(path);
             var fileName = Path.GetFileName(path);
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory!);
             _watcher = new FileSystemWatcher(directory!, fileName);
             _watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
             _watcher.Changed += OnFileWatcherFoundChange;
