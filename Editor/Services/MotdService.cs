@@ -32,7 +32,7 @@ namespace Foxscore.EasyLogin.Services
         {
             var cacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Fox_score", "EasyLogin", "cache");
-            var cacheFilePath = new  FileInfo(cacheDir).FullName;
+            var cacheFilePath = Path.Combine(cacheDir, "motd.json");
             _cacheFileHandler = new SafeFileHandler(cacheFilePath, LoadCache);
             
             if (_cacheFileHandler.Exists())
@@ -53,10 +53,18 @@ namespace Foxscore.EasyLogin.Services
                 _ = FetchMotd();
             };
         }
-
+        
 #if FOXY_DEBUG
+        [MenuItem("Debug/Reload MOTD from cache")]
+        public static void DEBUG_ReloadMotdFromCache()
+        {
+            if (!_cacheFileHandler.Exists()) return;
+            var content = _cacheFileHandler.ReadAllText();
+            LoadCache(content);
+        }
+        
         [MenuItem("Debug/Fetch MOTD")]
-        public static void FetchMotdMenuItem() => _ = FetchMotd();
+        public static void DEBUG_FetchMotd() => _ = FetchMotd();
 #endif
         
         private static async Task FetchMotd()
