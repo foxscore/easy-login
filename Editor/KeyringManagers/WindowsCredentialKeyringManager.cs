@@ -36,6 +36,8 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         private void SetCred(string key, string value)
         {
+            if (Config.IsReadOnly) return;
+            
             const int splitPoint = 256;
             
             var i = 1;
@@ -85,6 +87,8 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         public override void Set(string id, AuthTokens tokens)
         {
+            if (Config.IsReadOnly) return;
+            
             SetCred(id, EncryptionLayer.Encrypt(tokens.Auth));
             
             if (tokens.TwoFactorAuth is not null)
@@ -93,6 +97,8 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         public override void Delete(string id)
         {
+            if (Config.IsReadOnly) return;
+            
             for (var i = 0; i < 1000; i++)
             {
                 var mainCred = new Credential

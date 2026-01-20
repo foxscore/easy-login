@@ -20,6 +20,12 @@ namespace Foxscore.EasyLogin
         Circular = 2,
     }
 
+    public enum ReadOnlyReason
+    {
+        None,
+        NewerConfig,
+    }
+
     [InitializeOnLoad]
     public class Config
     {
@@ -49,6 +55,10 @@ namespace Foxscore.EasyLogin
             }
         }
 
+        public static bool IsReadOnly => FileHandler.IsReadOnly;
+        public static ReadOnlyReason ReadOnlyReason = ReadOnlyReason.None;
+
+        public const int MaxSupportedVersion = 2;
         public static int Version => _instance._version;
 
         public static EncryptionLayerType EncryptionLayerType => _instance._encryptionLayerType;
@@ -163,7 +173,7 @@ namespace Foxscore.EasyLogin
 
         private static Config MakeDefault() => new()
         {
-            _version = 2,
+            _version = MaxSupportedVersion,
         };
 
         private static void Load(string fileContent)
@@ -188,6 +198,24 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
+                try
+                {
+                    var versionCheckInstance = JsonConvert.DeserializeObject<Abstract.VersionOnlyConfig>(fileContent);
+                    if (versionCheckInstance is { Version: > MaxSupportedVersion })
+                    {
+                        Log.Error(
+                            "The config file is using a newer version than what we support, and is actively causing problems.\nEasy Login has been disabled for this project until the project is updated.");
+                        FileHandler.MakeReadOnly();
+                        ReadOnlyReason = ReadOnlyReason.NewerConfig;
+                        Enabled = false;
+                        return;
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
+
                 Debug.LogException(e);
                 FileHandler.MakeBackup();
                 _instance = MakeDefault();
@@ -208,6 +236,13 @@ namespace Foxscore.EasyLogin
 #endif
                     }
                 };
+            }
+
+            if (Version > MaxSupportedVersion)
+            {
+                FileHandler.MakeReadOnly();
+                ReadOnlyReason = ReadOnlyReason.NewerConfig;
+                Log.Warning("The config file is using a newer version than what we support. To limit loss of data, read-only mode has been enabled.\nPlease update this package to gain write-access to your Easy Login settings and accounts.");
             }
 
             #region Version upgrades

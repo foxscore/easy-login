@@ -156,10 +156,31 @@ namespace Foxscore.EasyLogin.Hooks
 
             #endregion
 
+            if (Config.IsReadOnly)
+            {
+                EditorGUILayout.HelpBox(
+                    "Read-Only mode has been engaged.\nSee the settings page for more information.",
+                    MessageType.Warning
+                );
+                EditorGUILayout.Space();
+            }
+
             if (AuthSession is not null)
             {
-                AuthSession.Render();
-                VRCSdkControlPanel.window.Repaint();
+                if (Config.IsReadOnly)
+                {
+                    EditorGUILayout.HelpBox(
+                        "Accounts cannot be added / modified due to Read-Only mode being enabled.",
+                        MessageType.Error
+                    );
+                    if (GUILayout.Button("Go Back"))
+                        AuthSession = null;
+                }
+                else
+                {
+                    AuthSession.Render();
+                    VRCSdkControlPanel.window.Repaint();   
+                }
             }
             // Vault not unlocked
             else if (Accounts.CurrentAccount == null && !Accounts.KeyringManager.EncryptionLayer.IsUnlocked())
@@ -199,21 +220,39 @@ namespace Foxscore.EasyLogin.Hooks
                     {
                         new Task(() =>
                         {
+                            // TODO Show the user a loading screen
                             try
                             {
-                                API.VerifyTokens(Accounts.KeyringManager.Get(account.Id),
-                                    () => { Accounts.SetCurrentAccount(account); }, () =>
+                                API.VerifyTokens(
+                                    Accounts.KeyringManager.Get(account.Id),
+                                    () => { Accounts.SetCurrentAccount(account); },
+                                    () =>
                                     {
                                         EditorApplication.delayCall += () =>
                                         {
-                                            // ToDo: Change to in-window popup instead of dialog
-                                            if (EditorUtility.DisplayDialog(
+                                            if (Config.IsReadOnly)
+                                            {
+                                                EditorUtility.DisplayDialog(
                                                     "Easy Login",
-                                                    "Sessions expired. Please login again.",
-                                                    "Ok", "Not now"))
-                                                AuthSession = new AuthSession(account);
+                                                    "Session expired.\n\n" +
+                                                    "Usually, you'd have to re-enter your password, but this is currently not possible due to Read-Only mode being enabled.\n\n" +
+                                                    "See the settings page for more information.",
+                                                    "Ok"
+                                                );
+                                            }
+                                            else
+                                            {
+                                                // ToDo: Change to in-window popup instead of dialog
+                                                if (EditorUtility.DisplayDialog(
+                                                        "Easy Login",
+                                                        "Sessions expired. Please login again.",
+                                                        "Ok", "Not now"))
+                                                    AuthSession = new AuthSession(account);
+                                            }
                                         };
-                                    }, error => { Log.Error("Failed to verify credentials: " + error); });
+                                    },
+                                    error => { Log.Error("Failed to verify credentials: " + error); }
+                                );
                             }
                             catch (Exception e)
                             {
@@ -242,40 +281,44 @@ namespace Foxscore.EasyLogin.Hooks
                                     : new Color(0.008f, 0.008f, 0.008f),
                             }
                         });
-
+                    
                     EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
 
                     buttonRect = new Rect(buttonRect.xMax + 2, buttonRect.y, 64, 64);
                     iconRect = new Rect(buttonRect.x + 11, buttonRect.y + 11, 42, 42);
 
-                    if (GUI.Button(buttonRect, "", "helpbox"))
-                        EditorApplication.delayCall += () =>
-                        {
-                            if (EditorUtility.DisplayDialog(
-                                    "Easy Login",
-                                    $"Are you sure you want to remove the [{account.Username}] account?",
-                                    "Yes, log me out", "Cancel"))
+                    using (new EditorGUI.DisabledGroupScope(Config.IsReadOnly))
+                        if (GUI.Button(buttonRect, "", "helpbox"))
+                            EditorApplication.delayCall += () =>
                             {
-                                Config.RemoveAccount(account.Id);
-                                var credentials = Accounts.KeyringManager.Get(account.Id);
-                                API.InvalidateSession(credentials);
-                                Accounts.KeyringManager.Delete(account.Id);
-                            }
-                        };
+                                if (EditorUtility.DisplayDialog(
+                                        "Easy Login",
+                                        $"Are you sure you want to remove the [{account.Username}] account?",
+                                        "Yes, log me out", "Cancel"))
+                                {
+                                    Config.RemoveAccount(account.Id);
+                                    var credentials = Accounts.KeyringManager.Get(account.Id);
+                                    API.InvalidateSession(credentials);
+                                    Accounts.KeyringManager.Delete(account.Id);
+                                }
+                            };
 
                     icon = Icons.Logout;
                     GUI.DrawTexture(iconRect, icon);
 
                     GUI.Label(buttonRect, new GUIContent("", "Remove account"));
-                    EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
+                    if (!Config.IsReadOnly)
+                        EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
                 }
 
                 buttonRect = EditorGUILayout.GetControlRect(false, 64, GUILayout.Width(400));
                 iconRect = new Rect(buttonRect.x + 11, buttonRect.y + 11, 42, 42);
                 labelRect = new Rect(iconRect.xMax + 11, iconRect.y, 200, 42);
 
-                if (GUI.Button(buttonRect, "", "helpbox"))
-                    AuthSession = new AuthSession();
+                
+                using (new EditorGUI.DisabledGroupScope(Config.IsReadOnly))
+                    if (GUI.Button(buttonRect, "", "helpbox"))
+                        AuthSession = new AuthSession();
 
                 icon = Icons.Login;
                 GUI.DrawTexture(iconRect, icon);
@@ -286,13 +329,16 @@ namespace Foxscore.EasyLogin.Hooks
                     alignment = TextAnchor.MiddleLeft,
                     normal =
                     {
-                        textColor = EditorGUIUtility.isProSkin
-                            ? new Color(0.6862745098f, 0.6862745098f, 0.6862745098f)
-                            : new Color(0.008f, 0.008f, 0.008f)
+                        textColor = (
+                            EditorGUIUtility.isProSkin
+                                ? new Color(0.6862745098f, 0.6862745098f, 0.6862745098f)
+                                : new Color(0.008f, 0.008f, 0.008f)
+                            ) * (Config.IsReadOnly ? 0.8f : 1f)
                     }
                 });
 
-                EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
+                if (!Config.IsReadOnly)
+                    EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
 
                 if (Accounts.KeyringManager.EncryptionLayer is PasswordEncryption)
                 {
@@ -394,6 +440,29 @@ namespace Foxscore.EasyLogin.Hooks
                 GUILayout.Label("Made with \u2665 by Fox_score");
             }
             EditorGUILayout.EndHorizontal();
+
+            if (Config.IsReadOnly)
+            {
+                var message = Config.ReadOnlyReason switch
+                {
+                    ReadOnlyReason.NewerConfig => "Your config file is of a newer version than what is currently supported.\n" + 
+                                                  "Read-Only mode has been engaged to protect your data.\n" +
+                                                  "Please update to the latest available version of Easy Login as soon as possible.",
+                    
+                    ReadOnlyReason.None or _ => "Read-Only mode has been engaged to protect your data.\n" +
+                                                "The system has not reported a valid reason for doing so.\n" +
+                                                "Please contact the developer if this issue persists.",
+                };
+                var type = Config.ReadOnlyReason switch
+                {
+                    ReadOnlyReason.NewerConfig => MessageType.Error,
+                    ReadOnlyReason.None => MessageType.Warning,
+                    _ => MessageType.Error,
+                };
+                EditorGUILayout.HelpBox(message, type);
+                EditorGUILayout.EndVertical();
+                return;
+            }
 
             var value = !Config.Enabled;
             var newValue = EditorGUILayout.ToggleLeft("Use original login system", value);

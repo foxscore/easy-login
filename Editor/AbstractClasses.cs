@@ -40,5 +40,11 @@ namespace Foxscore.EasyLogin
             
             public string[] GetVersions() => Versions.Properties().Select(p => p.Name).ToArray();
         }
+
+        public class VersionOnlyConfig
+        {
+            [JsonProperty("version")]
+            public int Version = 0;
+        }
     }
 }
