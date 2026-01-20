@@ -26,7 +26,7 @@ namespace Foxscore.EasyLogin.Services
         private const string IndexUrl = "https://foxscore.dev/vpm/index.json";
         private const double TimeBetweenUpdates = 15 * 60; // 15 Minutes
         
-        private static double _lastUpdate = 0;
+        private static double _lastUpdate = -100 - TimeBetweenUpdates; // * Default value must be low enough to trigger an update on startup
         private static DateTime? _lastUpdateDateTime;
         
         public static UpdateCheckResult? LastUpdateCheckResult { get; private set; }
