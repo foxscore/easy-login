@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -20,7 +21,8 @@ namespace Foxscore.EasyLogin.Services
         private const string Url = "https://raw.githubusercontent.com/foxscore/easy-login/refs/heads/main/motd.json";
         private const double TimeBetweenUpdates = 5 * 60; // 5 Minutes
 #endif
-        private static double _lastUpdate = 0;
+        private static double _lastUpdate = -100 - TimeBetweenUpdates; // * Default value must be low enough to trigger an update on startup 
+        private static SafeFileHandler _cacheFileHandler;
 
         private static MotdMessage[] _motdMessages = {};
         public static IReadOnlyCollection<MotdMessage> MotdMessages => _motdMessages;
@@ -28,6 +30,14 @@ namespace Foxscore.EasyLogin.Services
         [InitializeOnLoadMethod]
         private static void StartSyncService()
         {
+            var cacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Fox_score", "EasyLogin", "cache");
+            var cacheFilePath = new  FileInfo(cacheDir).FullName;
+            _cacheFileHandler = new SafeFileHandler(cacheFilePath, LoadCache);
+            
+            if (_cacheFileHandler.Exists())
+                LoadCache(_cacheFileHandler.ReadAllText());
+            
             var rawPreviousLastUpdate = SessionState.GetString("EasyLogin::motd::LastUpdate", null);
             if (!string.IsNullOrWhiteSpace(rawPreviousLastUpdate))
             {
@@ -61,6 +71,7 @@ namespace Foxscore.EasyLogin.Services
                 var rawJson = await client.GetStringAsync(Url);
                 var messages = JsonConvert.DeserializeObject<MotdMessage[]>(rawJson);
                 UpdateData(messages);
+                WriteCache();
             }
             catch (Exception e)
             {
@@ -75,6 +86,28 @@ namespace Foxscore.EasyLogin.Services
             if (newMotdMessages != null)
                 _motdMessages = newMotdMessages;
             SessionState.SetString("EasyLogin::motd::LastUpdate", _lastUpdate.ToString(CultureInfo.InvariantCulture));
+        }
+        
+        private static void WriteCache()
+        {
+            var json = JsonConvert.SerializeObject(_motdMessages, Formatting.Indented);
+            _cacheFileHandler.WriteAllText(json);
+        }
+
+        private static void LoadCache(string fileContent)
+        {
+            if (string.IsNullOrEmpty(fileContent))
+            {
+                Thread.Sleep(10);
+                fileContent = _cacheFileHandler.ReadAllText();
+                if (string.IsNullOrEmpty(fileContent))
+                {
+                    // Now we know for sure that the cache file is either empty or non-existent.
+                    // Strange, but not a problem. Just reset the data stored in here.
+                    fileContent = "[]";
+                }
+            }
+            _motdMessages = JsonConvert.DeserializeObject<MotdMessage[]>(fileContent);
         }
     }
 
