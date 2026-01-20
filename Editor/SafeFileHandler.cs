@@ -19,6 +19,9 @@ namespace Foxscore.EasyLogin
         private readonly Action<string> _onFileChange;
         private readonly FileSystemWatcher _watcher;
         [CanBeNull] private Timer _debounceTimer;
+
+        public bool IsReadOnly { get; private set; } = false;
+        public void MakeReadOnly() => IsReadOnly = true;
         
         public string BackupPath => _path + ".bak";
 
@@ -30,6 +33,8 @@ namespace Foxscore.EasyLogin
             // Setup file watcher
             var directory = Path.GetDirectoryName(path);
             var fileName = Path.GetFileName(path);
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory!);
             _watcher = new FileSystemWatcher(directory!, fileName);
             _watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
             _watcher.Changed += OnFileWatcherFoundChange;
@@ -88,6 +93,7 @@ namespace Foxscore.EasyLogin
 
         public void WriteAllText(string text)
         {
+            if (IsReadOnly) return;
             lock (_lock)
             {
                 if (!Directory.Exists(Path.GetDirectoryName(_path)))
@@ -107,6 +113,7 @@ namespace Foxscore.EasyLogin
 
         public void MakeBackup()
         {
+            if (IsReadOnly) return;
             lock (_lock)
             {
                 File.Copy(_path, _path + ".bak", true);

@@ -53,6 +53,13 @@ namespace Foxscore.EasyLogin.KeyringManagers
             }
             catch (Exception e)
             {
+                if (Config.IsReadOnly)
+                {
+                    Log.Warning("The credentials file appears to be corrupted. Read-Only mode is enabled, so it won't be reset.\nPlease check the settings page for more information.");
+                    _creds = new Dictionary<string, string>();
+                    return;
+                }
+                
                 Debug.LogException(e);
                 _fileHandler.MakeBackup();
                 _creds = new();
@@ -80,6 +87,12 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         private void Save()
         {
+            if (Config.IsReadOnly)
+            {
+                _fileHandler.MakeReadOnly();
+                return;
+            }
+            
             lock (Lock)
             {
                 var json = JsonConvert.SerializeObject(_creds, Formatting.Indented);
@@ -97,6 +110,12 @@ namespace Foxscore.EasyLogin.KeyringManagers
         }
 
         public override void Set(string id, AuthTokens tokens) {
+            if (Config.IsReadOnly)
+            {
+                _fileHandler.MakeReadOnly();
+                return;
+            }
+            
             _creds[id] = EncryptionLayer.Encrypt(
                 JsonConvert.SerializeObject(tokens)
             );
@@ -105,6 +124,12 @@ namespace Foxscore.EasyLogin.KeyringManagers
 
         public override void Delete(string id)
         {
+            if (Config.IsReadOnly)
+            {
+                _fileHandler.MakeReadOnly();
+                return;
+            }
+            
             _creds.Remove(id);
             Save();
         }
