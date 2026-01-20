@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
+using Version = SemanticVersioning.Version;
+using Range = SemanticVersioning.Range;
 
 namespace Foxscore.EasyLogin.Services
 {
@@ -124,9 +127,44 @@ namespace Foxscore.EasyLogin.Services
         [JsonProperty("valid_from")] public DateTime? ValidFrom;
         [JsonProperty("valid_until")] public DateTime? ValidUntil;
         [JsonProperty("allow_hiding")] public bool AllowHiding;
+        [JsonProperty("versionRange")] public string VersionRange;
+        [JsonProperty("operatingSystem")] public string[] OperatingSystem = Array.Empty<string>();
+
+        private bool? StaticShouldShow;
 
         public bool ShouldShow()
         {
+            if (!StaticShouldShow.HasValue)
+            {
+                if (OperatingSystem is { Length: > 0 })
+                {
+#if UNITY_EDITOR_WIN
+                    if (!OperatingSystem.Contains("windows"))
+#elif UNITY_EDITOR_OSX
+                if (!OperatingSystem.Contains("osx"))
+#elif UNITY_EDITOR_LINUX
+                if (!OperatingSystem.Contains("linux"))
+#endif
+                    {
+                        StaticShouldShow = false;
+                        return false;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(VersionRange))
+                {
+                    var version = Utils.GetPackageJson().VersionString;
+                    StaticShouldShow = Range.IsSatisfied(
+                        VersionRange,
+                        version,
+                        loose: true,
+                        includePrerelease: true
+                    );
+                }
+            }
+            if (!(StaticShouldShow ??= true))
+                return false;
+            
             if (AllowHiding && SessionState.GetBool($"EasyLogin::motd::HiddenMessages::{Guid}", false))
                 return false;
             if (ValidFrom.HasValue && ValidFrom.Value > DateTime.UtcNow)
