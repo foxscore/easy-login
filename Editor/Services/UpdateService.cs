@@ -194,5 +194,10 @@ namespace Foxscore.EasyLogin.Services
             SessionState.SetString("EasyLogin::updateCheck::LastUpdate",
                 _lastUpdate.ToString(CultureInfo.InvariantCulture));
         }
+
+        public static void InstallUpdate()
+        {
+            Log.Error("Not yet implemented");
+        }
     }
 }
