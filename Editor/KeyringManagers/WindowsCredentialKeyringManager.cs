@@ -89,8 +89,9 @@ namespace Foxscore.EasyLogin.KeyringManagers
         {
             if (Config.IsReadOnly) return;
             
-            SetCred(id, EncryptionLayer.Encrypt(tokens.Auth));
+            Log.Debug<WindowsCredentialKeyringManager>($"Updating creds for {id}");
             
+            SetCred(id, EncryptionLayer.Encrypt(tokens.Auth));
             if (tokens.TwoFactorAuth is not null)
                 SetCred($"{id}:2fa", EncryptionLayer.Encrypt(tokens.TwoFactorAuth));
         }
@@ -98,6 +99,8 @@ namespace Foxscore.EasyLogin.KeyringManagers
         public override void Delete(string id)
         {
             if (Config.IsReadOnly) return;
+            
+            Log.Debug<WindowsCredentialKeyringManager>($"Deleting creds for {id}");
             
             for (var i = 0; i < 1000; i++)
             {

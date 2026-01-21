@@ -204,7 +204,7 @@ namespace Foxscore.EasyLogin
                     error =>
                     {
                         ShowError("Login Error", error);
-                        Log.Error($"An error occured while trying to login: {error}");
+                        Log.Error<AuthSession>($"An error occured while trying to login: {error}");
                     }
                 );
             }
@@ -238,14 +238,14 @@ namespace Foxscore.EasyLogin
                             {
                                 ShowError("Failed to fetch profile",
                                     "The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
-                                Log.Error(
+                                Log.Error<AuthSession>(
                                     "The credentials have already expired! This should never happen! Please contact us on the Discord as soon as possible.");
                             },
                             // Error
                             error =>
                             {
                                 ShowError("Failed to fetch profile", error);
-                                Log.Error($"An error occured while trying to fetch the profile during login: {error}");
+                                Log.Error<AuthSession>($"An error occured while trying to fetch the profile during login: {error}");
                             }
                         );
                     },
@@ -261,7 +261,7 @@ namespace Foxscore.EasyLogin
                     error =>
                     {
                         ShowError("Login Error", error);
-                        Log.Error($"An error occured while trying to login: {error}");
+                        Log.Error<AuthSession>($"An error occured while trying to login: {error}");
                     }
                 );
             }
