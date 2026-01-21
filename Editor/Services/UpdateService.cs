@@ -94,7 +94,7 @@ namespace Foxscore.EasyLogin.Services
 
                 // Get available versions
                 using var client = new HttpClient();
-                client.SetEasyLoginUserAgent(packageJson.VersionString);
+                client.SetEasyLoginUserAgent();
                 var rawJson = await client.GetStringAsync(IndexUrl);
                 var abstractIndex = JsonConvert.DeserializeObject<Abstract.Index>(rawJson);
                 var versions = abstractIndex.Packages.EasyLogin.GetVersions();

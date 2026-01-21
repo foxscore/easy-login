@@ -74,9 +74,8 @@ namespace Foxscore.EasyLogin.Services
         {
             try
             {
-                var packageJson = Utils.GetPackageJson();
                 using var client = new HttpClient();
-                client.SetEasyLoginUserAgent(packageJson.VersionString);
+                client.SetEasyLoginUserAgent();
                 var rawJson = await client.GetStringAsync(Url);
                 var messages = JsonConvert.DeserializeObject<MotdMessage[]>(rawJson);
                 UpdateData(messages);
