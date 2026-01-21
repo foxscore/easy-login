@@ -1,10 +1,30 @@
 # Changelog
 
+## [1.0.6-beta.4] - 2026-01-21
+
+### ADDED
+
+- Storing logs on disk
+
+### CHANGED
+
+- Improved logging system
+
 ## [1.0.6-beta.3] - 2026-01-19
 
 ### ADDED
 
 - Added automatic update detection
+- Added additional MOTD filters
+- Made settings read-only if it's a newer version than what we can handle
+
+### CHANGED
+
+- Loading and storing MOTD on disk
+
+### REMOVED
+
+- Removed the `motd.json` file from zip builds
 
 ## [1.0.6-beta.2] - 2026-01-19
 
