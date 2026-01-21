@@ -159,7 +159,7 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Debug("Exception raised while running `API.Login`", e);
                 onError("Internal error");
             }
         }
@@ -204,7 +204,7 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Debug("Exception raised while running `API.VerifyTokens`", e);
                 onError("Internal Error");
             }
         }
@@ -268,7 +268,7 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Debug("Exception raised while running `API.FetchProfile`", e);
                 onError("Internal error");
             }
         }
@@ -287,7 +287,7 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Debug("Exception raised while running `API.FetchAsset`", e);
                 onError("Internal error");
             }
         }
@@ -313,18 +313,26 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Debug("Exception raised while running `API.Verify2Fa`", e);
                 onError("Internal Error");
             }
         }
 
         public static void InvalidateSession(AuthTokens tokens)
         {
-            var request = CreateRequest($"{Endpoint}logout", HTTPMethods.Put, tokens);
-            request.Cookies.Add(new("auth", tokens.Auth));
-            if (!string.IsNullOrWhiteSpace(tokens.TwoFactorAuth))
-                request.Cookies.Add(new("twoFactorAuth", tokens.TwoFactorAuth));
-            request.Send();
+            try
+            {
+                var request = CreateRequest($"{Endpoint}logout", HTTPMethods.Put, tokens);
+                request.Cookies.Add(new("auth", tokens.Auth));
+                if (!string.IsNullOrWhiteSpace(tokens.TwoFactorAuth))
+                    request.Cookies.Add(new("twoFactorAuth", tokens.TwoFactorAuth));
+                request.Send();
+            }
+            catch (Exception e)
+            {
+                Log.Debug("Exception raised while running `API.InvalidateSession`", e);
+                throw;
+            }
         }
     }
 }

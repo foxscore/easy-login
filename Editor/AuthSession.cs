@@ -210,7 +210,7 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Error<AuthSession>("There was an error while trying to validate your credentials", e);
                 AccountWindowGUIHook.AuthSession = null;
             }
         }
@@ -267,7 +267,7 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Error<AuthSession>("There was an error while trying to validate your 2FA credentials", e);
                 AccountWindowGUIHook.AuthSession = null;
             }
         }

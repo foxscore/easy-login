@@ -60,7 +60,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
                     return;
                 }
                 
-                Debug.LogException(e);
+                Log.Error("Failed to load credentials file", e);
                 _fileHandler.MakeBackup();
                 _creds = new();
                 Save();

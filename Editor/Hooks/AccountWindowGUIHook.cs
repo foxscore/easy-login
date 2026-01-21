@@ -256,7 +256,7 @@ namespace Foxscore.EasyLogin.Hooks
                             }
                             catch (Exception e)
                             {
-                                Debug.LogException(e);
+                                Log.Error($"There was an error while trying to sign you in as `{account.Username}`", e);
                             }
                         }).Start();
                     }

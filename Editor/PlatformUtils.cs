@@ -27,7 +27,9 @@ namespace Foxscore.EasyLogin
                 typeof(Harmony).Assembly.GetName().Version is { Major: >= 2, Minor: >= 4 }
             )
                 return (_isPlatformSupported = true).Value;
-
+            
+            Log.Debug("Detected incompatible version of Harmony on ARM device.");
+            
             if (SessionState.GetBool("EasyLogin::ArmPlatformCheck::DisplayedWarningMessage", false))
                 return (_isPlatformSupported = false).Value;
 
