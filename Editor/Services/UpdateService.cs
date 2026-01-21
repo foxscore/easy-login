@@ -30,6 +30,7 @@ namespace Foxscore.EasyLogin.Services
         private static DateTime? _lastUpdateDateTime;
         
         public static UpdateCheckResult? LastUpdateCheckResult { get; private set; }
+        public static bool IsUpdateAvailable => LastUpdateCheckResult is { IsUpdateAvailable: true };
 
         [InitializeOnLoadMethod]
         private static void Initialize()
@@ -41,9 +42,37 @@ namespace Foxscore.EasyLogin.Services
                 _lastUpdate = lastUpdateValue;
             }
 
+            LoadStateFromDisk();
             EditorApplication.update += BackgroundTick;
         }
-        
+
+        private static string TempDirPath = Path.Combine(Application.dataPath, "..", "Temp", "EasyLogin");
+        private static string StatePath => Path.Combine(TempDirPath, "update_check.json");
+
+        private static void LoadStateFromDisk()
+        {
+            if (!File.Exists(StatePath))
+                return;
+            var fileContent = File.ReadAllText(StatePath);
+            try
+            {
+                LastUpdateCheckResult = JsonConvert.DeserializeObject<UpdateCheckResult>(fileContent, new VersionSerializer());
+            }
+            catch (Exception e)
+            {
+                Log.Debug("Failed to restore last update result", e);
+                File.Delete(StatePath);
+            }
+        }
+
+        private static void SaveStateToDisk()
+        {
+            if (!Directory.Exists(TempDirPath))
+                Directory.CreateDirectory(TempDirPath);
+            var json = JsonConvert.SerializeObject(LastUpdateCheckResult, Formatting.Indented, new VersionSerializer());
+            File.WriteAllText(StatePath, json);
+        }
+
 #if FOXY_DEBUG
         [MenuItem("Debug/Check for Updates")]
         public static void CheckForUpdatesMenuItem() => _ = CheckForUpdates_BackgroundTask();
@@ -85,8 +114,8 @@ namespace Foxscore.EasyLogin.Services
                     "settings.json"
                 );
                 var shouldRespectPreReleases = currentSemVer.IsPreRelease;
-                if ( ! shouldRespectPreReleases || File.Exists(configPath)
-                ) {
+                if (!shouldRespectPreReleases || File.Exists(configPath))
+                {
                     var fileContents = await File.ReadAllTextAsync(configPath);
                     var config = JsonConvert.DeserializeObject<Abstract.VccConfig>(fileContents);
                     shouldRespectPreReleases = config is { ShowPrereleasePackages: true };
@@ -130,10 +159,23 @@ namespace Foxscore.EasyLogin.Services
 
         private static void UpdateData(UpdateCheckResult? result)
         {
-            _lastUpdate = EditorApplication.timeSinceStartup;
-            if (result.HasValue)
+            if (
+                result.HasValue && (
+                    !LastUpdateCheckResult.HasValue || (
+                        LastUpdateCheckResult.Value.IsUpdateAvailable != result.Value.IsUpdateAvailable &&
+                        LastUpdateCheckResult.Value.InstalledVersion != result.Value.InstalledVersion &&
+                        LastUpdateCheckResult.Value.LatestVersionAvailable != result.Value.LatestVersionAvailable
+                    )
+                )
+            )
+            {
                 LastUpdateCheckResult = result.Value;
-            SessionState.SetString("EasyLogin::updateCheck::LastUpdate", _lastUpdate.ToString(CultureInfo.InvariantCulture));
+                SaveStateToDisk();
+            }
+
+            _lastUpdate = EditorApplication.timeSinceStartup;
+            SessionState.SetString("EasyLogin::updateCheck::LastUpdate",
+                _lastUpdate.ToString(CultureInfo.InvariantCulture));
         }
     }
 }
