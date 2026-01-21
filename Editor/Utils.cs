@@ -9,12 +9,16 @@ namespace Foxscore.EasyLogin
 {
     public static class Utils
     {
-        public static void SetEasyLoginUserAgent(this HttpClient client)
+        public static string GetUserAgentValue()
         {
             var version = GetPackageJson().VersionString;
-            var userAgent = $"EasyLogin/{version} (Unity Editor, {Environment.OSVersion.VersionString})";
+            return $"EasyLogin/{version} (Unity Editor, {Environment.OSVersion.VersionString})";
+        }
+        
+        public static void SetEasyLoginUserAgent(this HttpClient client)
+        {
             client.DefaultRequestHeaders.Remove("User-Agent");
-            client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+            client.DefaultRequestHeaders.Add("User-Agent", GetUserAgentValue());
         }
 
         [CanBeNull] private static Abstract.PackageJson _packageJsonCache;

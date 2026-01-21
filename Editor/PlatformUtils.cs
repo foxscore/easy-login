@@ -55,7 +55,7 @@ namespace Foxscore.EasyLogin
             using var webClient = new WebClient();
 
             // Set User-Agent header (required by GitHub API)
-            webClient.Headers.Add("User-Agent", "Easy Login");
+            webClient.Headers.Add("User-Agent", Utils.GetUserAgentValue());
 
             Log.Info("Fetching latest release information...");
             var releaseJson = webClient.DownloadString(releaseUrl);
