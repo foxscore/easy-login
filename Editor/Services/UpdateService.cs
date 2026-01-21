@@ -28,7 +28,8 @@ namespace Foxscore.EasyLogin.Services
         
         private static double _lastUpdate = -100 - TimeBetweenUpdates; // * Default value must be low enough to trigger an update on startup
         private static DateTime? _lastUpdateDateTime;
-        
+
+        public static bool IsChecking { get; private set; }
         public static UpdateCheckResult? LastUpdateCheckResult { get; private set; }
         public static bool IsUpdateAvailable => LastUpdateCheckResult is { IsUpdateAvailable: true };
 
@@ -101,12 +102,24 @@ namespace Foxscore.EasyLogin.Services
 
         public static async Task<Result<UpdateCheckResult>> CheckForUpdates()
         {
+            if (IsChecking)
+            {
+                do
+                {
+                    await Task.Delay(10);
+                } while (IsChecking);
+                return LastUpdateCheckResult.HasValue
+                    ? Result<UpdateCheckResult>.Success(LastUpdateCheckResult.Value)
+                    : Result<UpdateCheckResult>.Failure("Another update check was already running, and it encountered an error.");
+            }
+            IsChecking = true;
+
             try
             {
                 // Load currently installed version
                 var packageJson = Utils.GetPackageJson();
                 var currentSemVer = packageJson.GetSemanticVersion();
-                
+
                 // Should we check if 
                 var configPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -138,7 +151,7 @@ namespace Foxscore.EasyLogin.Services
                     if (semVer > latestVersion)
                         latestVersion = semVer;
                 }
-                
+
                 // Done
                 var updateCheckResult = new UpdateCheckResult()
                 {
@@ -154,6 +167,10 @@ namespace Foxscore.EasyLogin.Services
                 UpdateData(null);
                 Log.Error($"There was an error while trying to check for updates: {e}");
                 return Result<UpdateCheckResult>.Failure(e);
+            }
+            finally
+            {
+                IsChecking = false;
             }
         }
 
