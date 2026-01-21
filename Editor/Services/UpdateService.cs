@@ -58,6 +58,13 @@ namespace Foxscore.EasyLogin.Services
             try
             {
                 LastUpdateCheckResult = JsonConvert.DeserializeObject<UpdateCheckResult>(fileContent, new VersionSerializer());
+
+                if (LastUpdateCheckResult.Value.InstalledVersion.ToString() != Utils.GetPackageJson().VersionString)
+                {
+                    Log.Debug("Restored update result is referencing a different installed version, resetting...");
+                    LastUpdateCheckResult = null;
+                    File.Delete(StatePath);
+                }
             }
             catch (Exception e)
             {
