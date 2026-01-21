@@ -101,12 +101,12 @@ namespace Foxscore.EasyLogin
         }
         private static void Internal_Warning(Type type, string message, Exception exception)
         {
-            UnityEngine.Debug.Log(UnityDebugPrefix + message);
+            UnityEngine.Debug.LogWarning(UnityDebugPrefix + message);
             WriteToLogFile("WRN", $"[{type?.Name ?? "ERR_NoType"}] {message}", exception);
         }
         private static void Internal_Error(Type type, string message, Exception exception)
         {
-            UnityEngine.Debug.Log(UnityDebugPrefix + message);
+            UnityEngine.Debug.LogError(UnityDebugPrefix + message);
             WriteToLogFile("ERR", $"[{type?.Name ?? "ERR_NoType"}] {message}", exception);
         }
         
