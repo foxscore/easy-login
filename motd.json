@@ -2,6 +2,7 @@
   {
     "id": "e61c343e-4ffa-4d3e-96ae-35816b77cc2f",
     "message": "<size=16><b>Important Notice</b></size>\nVersion <color=cyan>1.0.6</color> <color=yellow>Beta 2</color> introduces an <size=13><b>experimental</b></size> data storage framework. Please proceed with caution when updating, as there is a risk of losing Easy Login specific data.",
-    "allow_hiding": true
+    "allow_hiding": true,
+    "versionRange": "<=1.0.6-beta.2"
   }
 ]
