@@ -49,8 +49,8 @@ namespace Foxscore.EasyLogin.Services
             EditorApplication.update += BackgroundTick;
         }
 
-        private static string TempDirPath = Path.Combine(Application.dataPath, "..", "Temp", "EasyLogin");
-        private static string StatePath => Path.Combine(TempDirPath, "update_check.json");
+        private static string TempDirPath = Path.Combine(Application.dataPath, "..", "Temp", "EasyLogin","cache");
+        private static string StatePath => Path.Combine(TempDirPath, "updates.json");
 
         private static void LoadStateFromDisk()
         {

@@ -33,8 +33,7 @@ namespace Foxscore.EasyLogin.Services
         [InitializeOnLoadMethod]
         private static void StartSyncService()
         {
-            var cacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Fox_score", "EasyLogin", "cache");
+            var cacheDir = Path.Combine(Application.dataPath, "..", "Temp", "EasyLogin", "cache");
             var cacheFilePath = Path.Combine(cacheDir, "motd.json");
             _cacheFileHandler = new SafeFileHandler(cacheFilePath, LoadCache);
             
