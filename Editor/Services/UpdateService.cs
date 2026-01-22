@@ -164,7 +164,7 @@ namespace Foxscore.EasyLogin.Services
                 // Done
                 var updateCheckResult = new UpdateCheckResult()
                 {
-                    IsUpdateAvailable = latestVersion != currentSemVer,
+                    IsUpdateAvailable = latestVersion > currentSemVer,
                     InstalledVersion = currentSemVer,
                     LatestVersionAvailable = latestVersion
                 };
@@ -188,8 +188,8 @@ namespace Foxscore.EasyLogin.Services
             if (
                 result.HasValue && (
                     !LastUpdateCheckResult.HasValue || (
-                        LastUpdateCheckResult.Value.IsUpdateAvailable != result.Value.IsUpdateAvailable &&
-                        LastUpdateCheckResult.Value.InstalledVersion != result.Value.InstalledVersion &&
+                        LastUpdateCheckResult.Value.IsUpdateAvailable != result.Value.IsUpdateAvailable ||
+                        LastUpdateCheckResult.Value.InstalledVersion != result.Value.InstalledVersion ||
                         LastUpdateCheckResult.Value.LatestVersionAvailable != result.Value.LatestVersionAvailable
                     )
                 )
