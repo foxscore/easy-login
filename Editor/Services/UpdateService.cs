@@ -151,13 +151,13 @@ namespace Foxscore.EasyLogin.Services
                 var versions = abstractIndex.Packages.EasyLogin.GetVersions();
 
                 // Compare versions
-                var latestVersion = currentSemVer;
+                Version latestVersion = null;
                 foreach (var version in versions)
                 {
                     var semVer = Version.Parse(version);
                     if (!shouldRespectPreReleases && semVer.IsPreRelease)
                         continue;
-                    if (semVer > latestVersion)
+                    if (latestVersion == null || semVer > latestVersion)
                         latestVersion = semVer;
                 }
 
