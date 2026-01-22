@@ -91,6 +91,8 @@ namespace Foxscore.EasyLogin
         {
 #if FOXY_DEBUG
             UnityEngine.Debug.Log("<color=grey>[<b>Easy Login</b>]</color> " + message);
+            if (exception != null)
+                UnityEngine.Debug.LogException(exception);
 #endif
             WriteToLogFile("DBG", $"[{type?.Name ?? "ERR_NoType"}] {message}", exception);
         }
@@ -98,16 +100,28 @@ namespace Foxscore.EasyLogin
         {
             UnityEngine.Debug.Log(UnityDebugPrefix + message);
             WriteToLogFile("INF", $"[{type?.Name ?? "ERR_NoType"}] {message}", exception);
+#if FOXY_DEBUG
+            if (exception != null)
+                UnityEngine.Debug.LogException(exception);
+#endif
         }
         private static void Internal_Warning(Type type, string message, Exception exception)
         {
             UnityEngine.Debug.LogWarning(UnityDebugPrefix + message);
             WriteToLogFile("WRN", $"[{type?.Name ?? "ERR_NoType"}] {message}", exception);
+#if FOXY_DEBUG
+            if (exception != null)
+                UnityEngine.Debug.LogException(exception);
+#endif
         }
         private static void Internal_Error(Type type, string message, Exception exception)
         {
             UnityEngine.Debug.LogError(UnityDebugPrefix + message);
             WriteToLogFile("ERR", $"[{type?.Name ?? "ERR_NoType"}] {message}", exception);
+#if FOXY_DEBUG
+            if (exception != null)
+                UnityEngine.Debug.LogException(exception);
+#endif
         }
         
         // Type-fetching calls
