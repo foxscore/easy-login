@@ -212,6 +212,7 @@ namespace Foxscore.EasyLogin.Services
                 return;
             }
             
+            Log.Debug($"Beginning update from {LastUpdateCheckResult.Value.InstalledVersion} to {LastUpdateCheckResult.Value.LatestVersionAvailable}");
             EditorApplication.LockReloadAssemblies();
             
             // Paths
@@ -230,10 +231,10 @@ namespace Foxscore.EasyLogin.Services
             else if (!Directory.Exists(tempPath))
                 Directory.CreateDirectory(tempPath);
                 
-            EditorUtility.DisplayProgressBar("Easy Login Update", "Fetching update metadata", 0);
             try
             {
                 // Get available versions
+                EditorUtility.DisplayProgressBar("Easy Login Update", "Fetching update metadata", 0);
                 Log.Debug("Getting update metadata...");
                 using var client = new HttpClient();
                 client.SetEasyLoginUserAgent();
@@ -245,13 +246,12 @@ namespace Foxscore.EasyLogin.Services
                     .First(p => p.Name == LastUpdateCheckResult.Value.LatestVersionAvailable.ToString())
                     .Value
                     .ToObject<Abstract.PackageJson>();
-                var downloadUrl = wantedVersionObject.ZipDownloadUrl;
-                Log.Debug($"Discovered url: {downloadUrl}");
+                Log.Debug($"Discovered url: {wantedVersionObject.ZipDownloadUrl}");
                 
                 // Download package
                 EditorUtility.DisplayProgressBar("Easy Login Update", "Downloading update", 0);
                 Log.Debug($"Downloading package to {zipDownloadPath}");
-                using var response = client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead).Result;
+                using var response = client.GetAsync(wantedVersionObject.ZipDownloadUrl, HttpCompletionOption.ResponseHeadersRead).Result;
                 response.EnsureSuccessStatusCode();
                 var totalBytes = response.Content.Headers.ContentLength;
                 using var downloadStream = response.Content.ReadAsStreamAsync().Result;
