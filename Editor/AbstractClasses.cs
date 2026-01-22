@@ -12,6 +12,9 @@ namespace Foxscore.EasyLogin
             [JsonProperty("version")]
             public string VersionString { get; set; }
             
+            [JsonProperty("url")]
+            public string ZipDownloadUrl { get; set; }
+            
             public Version GetSemanticVersion() => Version.Parse(VersionString);
         }
         
