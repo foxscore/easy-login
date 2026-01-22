@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.6-beta.5] - 2026-01-22
+
+### Added
+
+- Verifying `zipSHA256` hash of update before installation
+
 ## [1.0.6-beta.4] - 2026-01-21
 
 ### ADDED
