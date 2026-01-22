@@ -51,6 +51,7 @@ namespace Foxscore.EasyLogin.Hooks
         private static GUIStyle _motdMessageStyle;
         private static string _vaultPassword = "";
         private static Vector2 _scrollPosition;
+        private static GUIStyle _updateAvailableTitleStyle;
 
         private static void DrawMotd()
         {
@@ -165,6 +166,22 @@ namespace Foxscore.EasyLogin.Hooks
                 EditorGUILayout.Space();
             }
 
+            if (UpdateService.IsUpdateAvailable)
+            {
+                using (new GUILayout.VerticalScope("helpbox"))
+                {
+                    _updateAvailableTitleStyle ??= new GUIStyle("label")
+                    {
+                        fontSize = 16,
+                    };
+                    GUILayout.Label("Update available", _updateAvailableTitleStyle);
+                    GUILayout.Label("See the Easy Login section in the settings tab for more information.");
+                    if (GUILayout.Button("Go to settings"))
+                        Utils.SelectControlPanelTab(Utils.VRCSdkPanelTab.Settings);
+                }
+                EditorGUILayout.Space();
+            }
+
             if (AuthSession is not null)
             {
                 if (Config.IsReadOnly)
@@ -256,7 +273,7 @@ namespace Foxscore.EasyLogin.Hooks
                             }
                             catch (Exception e)
                             {
-                                Debug.LogException(e);
+                                Log.Error($"There was an error while trying to sign you in as `{account.Username}`", e);
                             }
                         }).Start();
                     }
@@ -440,6 +457,44 @@ namespace Foxscore.EasyLogin.Hooks
                 GUILayout.Label("Made with \u2665 by Fox_score");
             }
             EditorGUILayout.EndHorizontal();
+
+            
+            using (new EditorGUILayout.VerticalScope(GUI.skin.textArea))
+            {
+                const string unknownLatestString = "...";
+                
+                var currentVersion = UpdateService.LastUpdateCheckResult?.InstalledVersion?.ToString()
+                                     ?? Utils.GetPackageJson().VersionString;
+                var availableVersionText = UpdateService.LastUpdateCheckResult?.LatestVersionAvailable?.ToString() ?? unknownLatestString;
+                var isUpdateAvailable = UpdateService.LastUpdateCheckResult?.IsUpdateAvailable ?? false;
+
+                if (UpdateService.IsChecking)
+                {
+                    availableVersionText = unknownLatestString;
+                    VRCSdkControlPanel.window.Repaint();
+                }
+             
+                // EditorGUILayout.LabelField("Updates");
+                // using (new EditorGUI.IndentLevelScope())
+                {
+                    EditorGUILayout.LabelField("Installed", currentVersion);
+                    EditorGUILayout.LabelField("Available", availableVersionText);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        var updateButtonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
+                        if (GUI.Button(updateButtonRect, "Check for Updates"))
+                            _ = UpdateService.CheckForUpdates();
+
+                        using (new EditorGUI.DisabledGroupScope(!isUpdateAvailable || availableVersionText == unknownLatestString))
+                        {
+                            updateButtonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, 21));
+                            if (GUI.Button(updateButtonRect, $"Install Update"))
+                                UpdateService.InstallUpdate();
+                        }
+                    }
+                }
+            }
+            EditorGUILayout.Space();
 
             if (Config.IsReadOnly)
             {

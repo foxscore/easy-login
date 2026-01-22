@@ -70,7 +70,7 @@ namespace Foxscore.EasyLogin.PopupWindows
                         passwordEncryption
                     );
                     editorWindow.Close();
-                    Log.Info("Successfully switched to password encryption");
+                    Log.Info<EnableMasterPasswordEncryptionPopup>("Successfully switched to password encryption");
                 }
         }
     }

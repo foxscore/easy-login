@@ -71,7 +71,7 @@ namespace Foxscore.EasyLogin.PopupWindows
                             new BasicEncryption()
                         );
                         editorWindow.Close();
-                        Log.Info("Successfully switched to basic encryption");
+                        Log.Info<EnableBasicEncryptionPopup>("Successfully switched to basic encryption");
                     }
                 }
             
@@ -97,7 +97,7 @@ namespace Foxscore.EasyLogin.PopupWindows
                             Accounts.KeyringManager.EncryptionLayer,
                             new BasicEncryption()
                         );
-                        Log.Info("Successfully reset vault");
+                        Log.Info<EnableBasicEncryptionPopup>("Successfully reset vault");
                 }
             }
         }

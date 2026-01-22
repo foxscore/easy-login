@@ -60,7 +60,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
                     return;
                 }
                 
-                Debug.LogException(e);
+                Log.Error("Failed to load credentials file", e);
                 _fileHandler.MakeBackup();
                 _creds = new();
                 Save();
@@ -116,6 +116,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
                 return;
             }
             
+            Log.Debug<UnsecureCredentialsManager>($"Updating creds for {id}");
             _creds[id] = EncryptionLayer.Encrypt(
                 JsonConvert.SerializeObject(tokens)
             );
@@ -130,6 +131,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
                 return;
             }
             
+            Log.Debug<UnsecureCredentialsManager>($"Deleting creds for {id}");
             _creds.Remove(id);
             Save();
         }

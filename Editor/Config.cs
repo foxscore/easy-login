@@ -216,7 +216,7 @@ namespace Foxscore.EasyLogin
                     // ignored
                 }
 
-                Debug.LogException(e);
+                Log.Error("Failed to load config file", e);
                 FileHandler.MakeBackup();
                 _instance = MakeDefault();
                 Save();

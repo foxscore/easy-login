@@ -35,7 +35,8 @@ namespace Foxscore.EasyLogin
         public static void SetCurrentAccount(AccountStruct account)
         {
             if (account == null)
-                throw new ArgumentNullException("account");
+                throw new ArgumentNullException(nameof(account));
+            Log.Debug($"Switching to user {account.Username}");
             
             EditorApplication.delayCall += () => SessionState.SetString(SessionKey_CurrentUserId, account.Id);
             CurrentAccount = account;
@@ -58,10 +59,7 @@ namespace Foxscore.EasyLogin
                 );
                 APIUser.InitialFetchCurrentUser(user =>
                 {
-                    // CanCurrentAccountPublishAvatars = (user.Model as APIUser).canPublishAvatars;
-                    // CanCurrentAccountPublishWorlds = (user.Model as APIUser).canPublishWorlds;
-                    
-                    //region Update profile icon
+                    // Update profile icon
                     var apiUser = user.Model as APIUser;
 
                     var displayName = apiUser!.displayName;
@@ -75,7 +73,6 @@ namespace Foxscore.EasyLogin
                         Config.UpdateAccount(account);
                         ProfilePictureCache.ForceRedownload(account);
                     }
-                    //endregion
                 }, error =>
                 {
                     if (error == null)

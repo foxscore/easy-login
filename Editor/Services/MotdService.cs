@@ -58,7 +58,8 @@ namespace Foxscore.EasyLogin.Services
         }
         
 #if FOXY_DEBUG
-        [MenuItem("Debug/Reload MOTD from cache")]
+        
+        [MenuItem("Debug/MOTD/Reload from .../Cache")]
         public static void DEBUG_ReloadMotdFromCache()
         {
             if (!_cacheFileHandler.Exists()) return;
@@ -66,17 +67,59 @@ namespace Foxscore.EasyLogin.Services
             LoadCache(content);
         }
         
-        [MenuItem("Debug/Fetch MOTD")]
+        [MenuItem("Debug/MOTD/Reload from .../Origin")]
         public static void DEBUG_FetchMotd() => _ = FetchMotd();
+
+#region Mirror switching
+        private const string CompileFlag = "FOXY_USE_LOCAL_MOTD";
+        
+        [MenuItem("Debug/MOTD/Local mirror .../Enabled")]
+        public static void DEBUG_EnableLocalMirror()
+        {
+            var symbolsStr = PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            var symbols = symbolsStr.Split(';').ToList();
+            if (!symbols.Contains(CompileFlag))
+                symbols.Add(CompileFlag);
+            symbolsStr = string.Join(";", symbols);
+            PlayerSettings.SetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup, symbolsStr);
+            EditorUtility.RequestScriptReload();
+        }
+        [MenuItem("Debug/MOTD/Local mirror .../Enabled", true)]
+        public static bool DEBUG_EnableLocalMirror_Validate()
+        {
+            var symbolsStr = PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            var symbols = symbolsStr.Split(';');
+            return !symbols.Contains(CompileFlag);
+        }
+        
+        [MenuItem("Debug/MOTD/Local mirror .../Disabled")]
+        public static void DEBUG_DisableLocalMirror()
+        {
+            var symbolsStr = PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            var symbols = symbolsStr.Split(';').ToList();
+            if (symbols.Contains(CompileFlag))
+                symbols.Remove(CompileFlag);
+            symbolsStr = string.Join(";", symbols);
+            PlayerSettings.SetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup, symbolsStr);
+            EditorUtility.RequestScriptReload();
+        }
+        [MenuItem("Debug/MOTD/Local mirror .../Disabled", true)]
+        public static bool DEBUG_DisableLocalMirror_Validate()
+        {
+            var symbolsStr = PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            var symbols = symbolsStr.Split(';');
+            return symbols.Contains(CompileFlag);
+        }
+#endregion
+
 #endif
         
         private static async Task FetchMotd()
         {
             try
             {
-                var packageJson = Utils.GetPackageJson();
                 using var client = new HttpClient();
-                client.SetEasyLoginUserAgent(packageJson.VersionString);
+                client.SetEasyLoginUserAgent();
                 var rawJson = await client.GetStringAsync(Url);
                 var messages = JsonConvert.DeserializeObject<MotdMessage[]>(rawJson);
                 UpdateData(messages);

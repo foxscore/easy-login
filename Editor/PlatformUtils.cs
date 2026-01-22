@@ -27,7 +27,9 @@ namespace Foxscore.EasyLogin
                 typeof(Harmony).Assembly.GetName().Version is { Major: >= 2, Minor: >= 4 }
             )
                 return (_isPlatformSupported = true).Value;
-
+            
+            Log.Debug("Detected incompatible version of Harmony on ARM device.");
+            
             if (SessionState.GetBool("EasyLogin::ArmPlatformCheck::DisplayedWarningMessage", false))
                 return (_isPlatformSupported = false).Value;
 
@@ -55,7 +57,7 @@ namespace Foxscore.EasyLogin
             using var webClient = new WebClient();
 
             // Set User-Agent header (required by GitHub API)
-            webClient.Headers.Add("User-Agent", "Easy Login");
+            webClient.Headers.Add("User-Agent", Utils.GetUserAgentValue());
 
             Log.Info("Fetching latest release information...");
             var releaseJson = webClient.DownloadString(releaseUrl);

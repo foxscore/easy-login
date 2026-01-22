@@ -54,6 +54,7 @@ namespace Foxscore.EasyLogin
 
         private static void DownloadImage(AccountStruct account, bool ignoreCache = false)
         {
+            Log.Debug($"Downloading image for {account.Id}: {account.ProfilePictureUrl}");
             try
             {
                 var imagePath = GetCachedImagePath(account);
@@ -85,7 +86,7 @@ namespace Foxscore.EasyLogin
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Log.Error($"An error occured while downloading the profile picture of `{account.Username}`", e);
             }
         }
     }
