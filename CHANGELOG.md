@@ -9,6 +9,7 @@
 ### CHANGED
 
 - Improved logging system
+- Completed self update system
 
 ## [1.0.6-beta.3] - 2026-01-19
 
