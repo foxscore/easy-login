@@ -447,7 +447,6 @@ namespace Foxscore.EasyLogin.Hooks
             return false;
         }
 
-        private static StyleOption Preferences_IconStyle = Config.ProfilePictureStyle;
         private static void SettingPostfix()
         {
             EditorGUILayout.Separator();
