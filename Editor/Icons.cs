@@ -22,5 +22,7 @@ namespace Foxscore.EasyLogin
         public static Texture2D Login => GetIcon("plus");
         public static Texture2D Logout => GetIcon("xmark");
         public static Texture2D Lock => GetIcon("lock");
+        public static Texture2D GitHub => GetIcon("github");
+        public static Texture2D Discord => GetIcon("discord");
     }
 }

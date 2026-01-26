@@ -27,17 +27,25 @@ namespace Foxscore.EasyLogin.Services
         private static double _lastUpdate = -100 - TimeBetweenUpdates; // * Default value must be low enough to trigger an update on startup 
         private static SafeFileHandler _cacheFileHandler;
 
+        private static SafeFileHandler _hiddenMessagesGuidFileHandler;
+        private static List<string> _hiddenMessageGuids = new();
+        
         private static MotdMessage[] _motdMessages = {};
         public static IReadOnlyCollection<MotdMessage> MotdMessages => _motdMessages;
         
         [InitializeOnLoadMethod]
         private static void StartSyncService()
         {
-            var cacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Fox_score", "EasyLogin", "cache");
+            var elDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Fox_score", "EasyLogin");
+            var hiddenMessagesPath = Path.Combine(elDir, "hidden_messages.json");
+            _hiddenMessagesGuidFileHandler = new SafeFileHandler(hiddenMessagesPath, LoadHiddenMessages);
+            if (_hiddenMessagesGuidFileHandler.Exists())
+                LoadHiddenMessages(_hiddenMessagesGuidFileHandler.ReadAllText());
+            
+            var cacheDir = Path.Combine(Application.dataPath, "..", "Temp", "EasyLogin", "cache");
             var cacheFilePath = Path.Combine(cacheDir, "motd.json");
             _cacheFileHandler = new SafeFileHandler(cacheFilePath, LoadCache);
-            
             if (_cacheFileHandler.Exists())
                 LoadCache(_cacheFileHandler.ReadAllText());
             
@@ -159,8 +167,54 @@ namespace Foxscore.EasyLogin.Services
                     fileContent = "[]";
                 }
             }
-            _motdMessages = JsonConvert.DeserializeObject<MotdMessage[]>(fileContent);
+
+            try
+            {
+                _motdMessages = JsonConvert.DeserializeObject<MotdMessage[]>(fileContent);
+            }
+            catch (Exception e)
+            {
+                Log.Debug("Failed to load motd cache, resetting...", e);
+                _motdMessages = Array.Empty<MotdMessage>();
+                WriteCache();
+            }
         }
+
+        private static void WriteHiddenMessages()
+        {
+            var json = JsonConvert.SerializeObject(_hiddenMessageGuids, Formatting.Indented);
+            _hiddenMessagesGuidFileHandler.WriteAllText(json);
+        }
+
+        private static void LoadHiddenMessages(string fileContent)
+        {
+            if (string.IsNullOrEmpty(fileContent))
+            {
+                Thread.Sleep(10);
+                fileContent = _cacheFileHandler.ReadAllText();
+                if (string.IsNullOrEmpty(fileContent))
+                    fileContent = "[]";
+            }
+
+            try
+            {
+                _hiddenMessageGuids = JsonConvert.DeserializeObject<List<string>>(fileContent);
+            }
+            catch (Exception e)
+            {
+                Log.Error("Failed to load data relating to what MOTD's are hidden. A backup copy has been made and this data will be reset.", e);
+                _hiddenMessageGuids.Clear();
+                WriteHiddenMessages();
+            }
+        }
+
+        public static void HideMessagePermanently(string guid)
+        {
+            _hiddenMessageGuids.Add(guid);
+            WriteHiddenMessages();
+        }
+
+        public static bool IsMessageHiddenPermanently(string guid) => _hiddenMessageGuids.Contains(guid);
     }
 
     public class MotdMessage
@@ -207,7 +261,9 @@ namespace Foxscore.EasyLogin.Services
             }
             if (!(StaticShouldShow ??= true))
                 return false;
-            
+
+            if (AllowHiding && MotdService.IsMessageHiddenPermanently(Guid))
+                return false;
             if (AllowHiding && SessionState.GetBool($"EasyLogin::motd::HiddenMessages::{Guid}", false))
                 return false;
             if (ValidFrom.HasValue && ValidFrom.Value > DateTime.UtcNow)
@@ -217,9 +273,7 @@ namespace Foxscore.EasyLogin.Services
             return true;
         }
 
-        public void HideMessage()
-        {
-            SessionState.SetBool($"EasyLogin::motd::HiddenMessages::{Guid}", true);
-        }
+        public void HideMessage() => SessionState.SetBool($"EasyLogin::motd::HiddenMessages::{Guid}", true);
+        public void HideMessageForever() => MotdService.HideMessagePermanently(Guid);
     }
 }

@@ -4,13 +4,13 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
+using System.Security;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Version = SemanticVersioning.Version;
-using Range = SemanticVersioning.Range;
 using UnityEditor;
 using UnityEngine;
 
@@ -49,8 +49,8 @@ namespace Foxscore.EasyLogin.Services
             EditorApplication.update += BackgroundTick;
         }
 
-        private static string TempDirPath = Path.Combine(Application.dataPath, "..", "Temp", "EasyLogin");
-        private static string StatePath => Path.Combine(TempDirPath, "update_check.json");
+        private static string TempDirPath = Path.Combine(Application.dataPath, "..", "Temp", "EasyLogin","cache");
+        private static string StatePath => Path.Combine(TempDirPath, "updates.json");
 
         private static void LoadStateFromDisk()
         {
@@ -212,6 +212,7 @@ namespace Foxscore.EasyLogin.Services
                 return;
             }
             
+            Log.Debug($"Beginning update from {LastUpdateCheckResult.Value.InstalledVersion} to {LastUpdateCheckResult.Value.LatestVersionAvailable}");
             EditorApplication.LockReloadAssemblies();
             
             // Paths
@@ -230,10 +231,10 @@ namespace Foxscore.EasyLogin.Services
             else if (!Directory.Exists(tempPath))
                 Directory.CreateDirectory(tempPath);
                 
-            EditorUtility.DisplayProgressBar("Easy Login Update", "Fetching update metadata", 0);
             try
             {
                 // Get available versions
+                EditorUtility.DisplayProgressBar("Easy Login Update", "Fetching update metadata", 0);
                 Log.Debug("Getting update metadata...");
                 using var client = new HttpClient();
                 client.SetEasyLoginUserAgent();
@@ -245,13 +246,12 @@ namespace Foxscore.EasyLogin.Services
                     .First(p => p.Name == LastUpdateCheckResult.Value.LatestVersionAvailable.ToString())
                     .Value
                     .ToObject<Abstract.PackageJson>();
-                var downloadUrl = wantedVersionObject.ZipDownloadUrl;
-                Log.Debug($"Discovered url: {downloadUrl}");
+                Log.Debug($"Discovered url: {wantedVersionObject.ZipDownloadUrl}");
                 
                 // Download package
                 EditorUtility.DisplayProgressBar("Easy Login Update", "Downloading update", 0);
                 Log.Debug($"Downloading package to {zipDownloadPath}");
-                using var response = client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead).Result;
+                using var response = client.GetAsync(wantedVersionObject.ZipDownloadUrl, HttpCompletionOption.ResponseHeadersRead).Result;
                 response.EnsureSuccessStatusCode();
                 var totalBytes = response.Content.Headers.ContentLength;
                 using var downloadStream = response.Content.ReadAsStreamAsync().Result;
@@ -274,7 +274,21 @@ namespace Foxscore.EasyLogin.Services
                 fileStream.Seek(0, SeekOrigin.Begin);
                 Log.Debug("Download complete");
                 
-                // TODO Verify checksum
+                if (string.IsNullOrWhiteSpace(wantedVersionObject.ZipSHA256))
+                    Log.Debug("No SHA256 hash provided for this version.");
+                else
+                {
+                    Log.Debug("Computing SHA256 hash of the downloaded file.");
+                    using var hasher = SHA256.Create();
+                    var hash = hasher.ComputeHash(fileStream);
+                    fileStream.Seek(0, SeekOrigin.Begin);
+                    var hashString = BitConverter.ToString(hash).Replace("-", string.Empty);
+                    if (!hashString.Equals(wantedVersionObject.ZipSHA256, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Log.Error($"SHA256 hash mismatch for downloaded file. Computed: '{hashString}', Expected: '{wantedVersionObject.ZipSHA256}'");
+                        throw new SecurityException("Downloaded file hash does not match expected value.");
+                    }Log.Debug("SHA256 hashes match successfully.");
+                }
                 
                 Directory.CreateDirectory(backupPathRoot);
                 CopyDirectory(installationPath, installationBackupPath);
