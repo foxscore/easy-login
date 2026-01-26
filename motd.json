@@ -6,21 +6,15 @@
     "versionRange": "<=1.0.6-beta.2"
   },
   {
-    "id": "fd93d841-2d53-464d-9bc9-f4cbc4fb5318",
-    "message": "<size=16><b>Beta 4 is out</b></size>\nThe Easy Login <color=cyan>1.0.6</color> beta is entering its final stages.\nPlease update to <color=cyan>1.0.6</color> <color=yellow>Beta 4</color>.",
-    "allow_hiding": false,
-    "versionRange": "<1.0.6-beta.4"
-  },
-  {
     "id": "cb3a151f-9f90-4a0f-bc2f-730e57816677",
     "message": "<size=16><b>Feedback wanted</b></size>\nPlease provide any feedback you might have via email, Discord, or the GitHub page.",
     "allow_hiding": true,
     "versionRange": ">1.0.6-beta.3 <1.0.6"
   },
   {
-    "id": "fd93d841-2d53-464d-9bc9-f4cbc4fb5318",
-    "message": "There will be a <color=yellow>Beta 5</color> release in a few days.\nPlease use the new self-update functionality, introducted in <color=yellow>Beta 4</color>, located in the settings menu to update when the time comes.",
+    "id": "c4ca63b4-8c0a-45b9-9a6f-e82b0c67c337",
+    "message": "<size=16><b>Beta 5 is out</b></size>\nIf you are currently on <color=cyan>1.0.6</color> <color=yellow>Beta 4</color>, please try out the built-in updater on the settings page.",
     "allow_hiding": false,
-    "versionRange": ">1.0.6-beta.3 <1.0.6-beta.5"
+    "versionRange": "<1.0.6-beta.5"
   }
 ]
