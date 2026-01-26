@@ -497,7 +497,8 @@ namespace Foxscore.EasyLogin.Hooks
                 }
             }
             EditorGUILayout.Space();
-
+            
+            // ReadOnly Protection
             if (Config.IsReadOnly)
             {
                 var message = Config.ReadOnlyReason switch
@@ -517,10 +518,17 @@ namespace Foxscore.EasyLogin.Hooks
                     _ => MessageType.Error,
                 };
                 EditorGUILayout.HelpBox(message, type);
+                
+                // * Don't forget to draw the links!
+                EditorGUILayout.Space();
+                DrawLinks();
+                EditorGUILayout.Space();
+                
                 EditorGUILayout.EndVertical();
                 return;
             }
 
+            // Actual settings
             var value = !Config.Enabled;
             var newValue = EditorGUILayout.ToggleLeft("Use original login system", value);
             if (value != newValue)
@@ -605,8 +613,77 @@ namespace Foxscore.EasyLogin.Hooks
                         break;
                 }
             }
-
+            EditorGUILayout.Space();
+            
+            // Links
+            DrawLinks();
+            EditorGUILayout.Space();
+            
+            // End box
             EditorGUILayout.EndVertical();
+        }
+
+        private static GUIStyle _linkBorderStyle;
+        private static void DrawLinks()
+        {
+            _linkBorderStyle = new GUIStyle("ScriptText")
+            {
+                padding = new RectOffset(10, 10, 8, 6),
+            };
+            
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+
+                #region Functions
+                void DrawButton(Texture2D icon, string tooltip, string url)
+                {
+                    const int size = 24;
+                    var rect = EditorGUILayout.GetControlRect(false, size, GUILayout.Width(size));
+
+                    // Calculate imageRect to respect the aspect ratio of the icon, centered within the button rect
+                    float aspect = icon.width / (float)icon.height;
+                    float newWidth, newHeight;
+                    if (aspect > 1f) // Wider than tall
+                    {
+                        newWidth = size;
+                        newHeight = size / aspect;
+                    }
+                    else // Taller than wide or square
+                    {
+                        newHeight = size;
+                        newWidth = size * aspect;
+                    }
+
+                    var imageRect = new Rect(rect.x + (rect.width - newWidth) / 2f,
+                        rect.y + (rect.height - newHeight) / 2f, newWidth, newHeight);
+
+                    GUI.DrawTexture(imageRect, icon);
+                    if (GUI.Button(rect, new GUIContent("", tooltip), GUI.skin.label))
+                        Application.OpenURL(url);
+                    EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
+                }
+
+                void DrawSeparator(float leftSpacing, float rightSpacing)
+                {
+                    GUILayout.Space(leftSpacing);
+                    var rect = EditorGUILayout.GetControlRect(false, 20f, GUILayout.Width(1), GUILayout.Height(24));
+                    const float gradient = 86 / 255f;
+                    Handles.color = new Color(gradient, gradient, gradient, 1f);
+                    Handles.DrawLine(new Vector2(rect.x, rect.y), new Vector2(rect.x, rect.y + rect.height), 1);
+                    GUILayout.Space(rightSpacing);
+                }
+                #endregion
+
+                using (new EditorGUILayout.HorizontalScope(_linkBorderStyle))
+                {
+                    DrawButton(Icons.GitHub, "GitHub", "https://short.easy-vrc.com/easy-login-github");
+                    DrawSeparator(7, 6);
+                    DrawButton(Icons.Discord, "Discord", "https://short.easy-vrc.com/discord");
+                }
+
+                GUILayout.FlexibleSpace();
+            }
         }
 
         private static class MaskCache
