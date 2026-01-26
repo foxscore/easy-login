@@ -318,6 +318,7 @@ namespace Foxscore.EasyLogin.Services
                 }
 
                 Log.Info("Update complete");
+                EditorUtility.DisplayDialog("Easy Login Update", "Update complete", "Reload Unity");
             }
             catch (Exception e)
             {
