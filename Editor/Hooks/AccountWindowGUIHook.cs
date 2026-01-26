@@ -78,7 +78,10 @@ namespace Foxscore.EasyLogin.Hooks
                             GUILayout.Button("Hide", GUILayout.Width(40))
                         )
                         {
-                            message.HideMessage();   
+                            var menu = new GenericMenu();
+                            menu.AddItem(new GUIContent("For this session"), false, message.HideMessage);
+                            menu.AddItem(new GUIContent("Permanently"), false, message.HideMessageForever);
+                            menu.ShowAsContext();
                         }
                         EditorGUILayout.EndHorizontal();
                     }
