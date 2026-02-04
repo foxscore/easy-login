@@ -16,5 +16,11 @@
     "message": "<size=16><b>Beta 5 is out</b></size>\nIf you are currently on <color=cyan>1.0.6</color> <color=yellow>Beta 4</color>, please try out the built-in updater on the settings page.",
     "allow_hiding": false,
     "versionRange": "<1.0.6-beta.5"
+  },
+  {
+    "id": "465aa0de-a3af-43e4-b776-a023e0b50c91",
+    "message": "I've been made aware of an import issue that occurs due to shipping the `SematicVersioning.dll` file with Easy Login.\nA fix for this will ship either on the 6th or 7th.\n\nI apologize that it's going to take this long, even tho it's such a simple fix, but I won't be home until then.",
+    "allow_hiding": true,
+    "versionRange": ">=1.0.6-beta.3 <1.0.6-beta.6"
   }
 ]
