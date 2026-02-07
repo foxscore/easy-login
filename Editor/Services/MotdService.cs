@@ -10,8 +10,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
-using Version = SemanticVersioning.Version;
-using Range = SemanticVersioning.Range;
+using Version = Foxscore.EasyLogin.SemanticVersioning.Version;
+using Range = Foxscore.EasyLogin.SemanticVersioning.Range;
 
 namespace Foxscore.EasyLogin.Services
 {

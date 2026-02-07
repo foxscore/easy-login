@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Version = SemanticVersioning.Version;
+using Version = Foxscore.EasyLogin.SemanticVersioning.Version;
 using UnityEditor;
 using UnityEngine;
 

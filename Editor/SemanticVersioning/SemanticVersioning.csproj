@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>This library implements the Semantic Versioning 2.0.0 specification and the version range specification used by npm.</Description>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Copyright>Copyright Adam Reeve</Copyright>
+    <AssemblyTitle>SemanticVersioning</AssemblyTitle>
+    <Authors>Adam Reeve</Authors>
+    <AssemblyName>SemanticVersioning</AssemblyName>
+    <PackageId>SemanticVersioning</PackageId>
+    <Version>3.0.0</Version>
+    <PackageProjectUrl>https://github.com/adamreeve/semver.net</PackageProjectUrl>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/adamreeve/semver.net</RepositoryUrl>
+    <AssemblyOriginatorKeyFile>..\..\build\semver-key.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Label="Additional nuget files">
+    <None Include="../../LICENSE" Pack="true" PackagePath="\" />
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

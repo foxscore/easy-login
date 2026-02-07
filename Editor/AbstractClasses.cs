@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Version = SemanticVersioning.Version;
+using Foxscore.EasyLogin.SemanticVersioning;
 
 namespace Foxscore.EasyLogin
 {
