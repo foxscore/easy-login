@@ -1,10 +1,23 @@
 # Changelog
 
+## [1.0.6-beta.6] - 2026-02-07
+
+### CHANGED
+
+- Sipping `adamreeve/semver.net` source code instead of `SemanticVersioning.dll` to resolve incompatabiility issues with other packages
+- Now displaying an "Update complete" dialog when the self-update finishes
+
 ## [1.0.6-beta.5] - 2026-01-22
 
 ### Added
 
 - Verifying `zipSHA256` hash of update before installation
+- Added Discord and GitHub links to the settings page
+
+### CHANGED
+
+- Allowing the user to hide a given MOTD permanently
+- Storing MOTD cache in the project's `Temp` directory instead of `%localappdata%` 
 
 ## [1.0.6-beta.4] - 2026-01-21
 
