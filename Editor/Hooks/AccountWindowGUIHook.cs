@@ -30,18 +30,12 @@ namespace Foxscore.EasyLogin.Hooks
             OnAuthenticationVerifiedActionFieldInfo = typeof(VRCSdkControlPanel)
                 .GetField("onAuthenticationVerifiedAction", BindingFlags.NonPublic | BindingFlags.Static);
 
-            var accountMethod =
-                typeof(VRCSdkControlPanel).GetMethod("OnAccountGUI", BindingFlags.NonPublic | BindingFlags.Static);
-            var accountPrefix =
-                typeof(AccountWindowGUIHook).GetMethod(nameof(AccountPrefix),
-                    BindingFlags.NonPublic | BindingFlags.Static);
+            var accountMethod = AccessTools.Method(typeof(VRCSdkControlPanel), "OnAccountGUI");
+            var accountPrefix = AccessTools.Method(typeof(AccountWindowGUIHook), nameof(AccountPrefix));
 
-            var settingsMethod =
-                typeof(VRCSdkControlPanel).GetMethod("ShowSettings", BindingFlags.NonPublic | BindingFlags.Instance);
-            var settingsPostfix =
-                typeof(AccountWindowGUIHook).GetMethod(nameof(SettingPostfix),
-                    BindingFlags.NonPublic | BindingFlags.Static);
-
+            var settingsMethod = AccessTools.Method(typeof(VRCSdkControlPanel), "ShowSettings");
+            var settingsPostfix = AccessTools.Method(typeof(AccountWindowGUIHook), nameof(SettingPostfix)); 
+            
             var harmony = new Harmony("dev.foxscore.easy-login.accountWindowGUI");
             harmony.Patch(accountMethod, new HarmonyMethod(accountPrefix));
             harmony.Patch(settingsMethod, null, new HarmonyMethod(settingsPostfix));

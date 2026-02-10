@@ -1,21 +1,15 @@
 ﻿[
   {
-    "id": "e61c343e-4ffa-4d3e-96ae-35816b77cc2f",
-    "message": "<size=16><b>Important Notice</b></size>\nVersion <color=cyan>1.0.6</color> <color=yellow>Beta 2</color> introduces an <size=13><b>experimental</b></size> data storage framework. Please proceed with caution when updating, as there is a risk of losing Easy Login specific data.",
-    "allow_hiding": true,
-    "versionRange": "<=1.0.6-beta.2"
-  },
-  {
     "id": "cb3a151f-9f90-4a0f-bc2f-730e57816677",
     "message": "<size=16><b>Feedback wanted</b></size>\nPlease provide any feedback you might have via email, Discord, or the GitHub page.",
     "allow_hiding": true,
     "versionRange": ">1.0.6-beta.3 <1.0.6"
   },
   {
-    "id": "23aff1b1-b512-4379-8a28-6f633a02c2b1",
-    "message": "<size=16><b>Beta 6 is out</b></size>\nIf you have been experiencing import issues related to problems with the <b>Version</b> or <b>Range</b> classes, please update for those should have been fixed in the latest beta.",
+    "id": "fbe2e21c-e514-4d26-8e03-0658b5e6ed2f",
+    "message": "<size=16><b>Beta 7 is out</b></size>\nThis update resolves compatability issues with the <b>VRChat SDK Base</b> package, version <color=cyan>3.10.2</color> <color=yellow>Beta 1</color> and up.",
     "allow_hiding": false,
-    "versionRange": "<1.0.6-beta.6"
+    "versionRange": "<1.0.6-beta.7"
   },
   {
     "id": "465aa0de-a3af-43e4-b776-a023e0b50c91",
