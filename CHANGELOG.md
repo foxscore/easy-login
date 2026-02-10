@@ -7,6 +7,10 @@
 - Sipping `adamreeve/semver.net` source code instead of `SemanticVersioning.dll` to resolve incompatabiility issues with other packages
 - Now displaying an "Update complete" dialog when the self-update finishes
 
+### FIXED
+
+- Fixed a future incompatability issue (see commit message `262219e45d` for more details)
+
 ## [1.0.6-beta.5] - 2026-01-22
 
 ### Added
