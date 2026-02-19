@@ -1,7 +1,7 @@
-﻿[
+[
   {
-    "id": "cb3a151f-9f90-4a0f-bc2f-730e57816677",
-    "message": "<size=16><b>Feedback wanted</b></size>\nPlease provide any feedback you might have via email, Discord, or the GitHub page.",
+    "id": "032eadca-eb12-4c3c-901c-867a96e3c306",
+    "message": "<size=16><b>Feedback wanted</b></size>\nPlease provide any feedback you might have via email, Discord, or the GitHub page.\n<color=grey>Version 1.0.6-beta.7 will be promoted to the full 1.0.6 release, provided no more bugs are submitted within the next few days.",
     "allow_hiding": true,
     "versionRange": ">1.0.6-beta.3 <1.0.6"
   },
