@@ -48,7 +48,7 @@ jobs:
       id: tag_version
       uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
       with:
-        tag: "${{ env.version }}"
+        tag: "v${{ env.version }}"
 
     - name: Make Release
       uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
@@ -57,7 +57,7 @@ jobs:
           /tmp/${{ env.zipFile }}
           /tmp/${{ env.unityPackage }}
           package.json
-        tag_name: ${{ env.version }}
+        tag_name: v${{ env.version }}
         prerelease: ${{ steps.is_prerelease.outputs.is_prerelease }}
 
     - name: Update Repository

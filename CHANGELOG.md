@@ -10,6 +10,7 @@
 
 ### Changed
 - Slightly improved logging system, with logs now stored on disk
+- Changed git-tag naming scheme *(from `X.Y.Z` to `vX.Y.Z`)*
 
 ### Fixed
 - Updated to a newer version of the `foxscore/make-unitypackage` action. The old version was working correctly.
