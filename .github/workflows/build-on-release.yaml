@@ -59,6 +59,12 @@ jobs:
           package.json
         tag_name: v${{ env.version }}
         prerelease: ${{ steps.is_prerelease.outputs.is_prerelease }}
+        draft: true
+    
+    - name: Publish Release
+      run: gh release edit "v${{ env.version }}" --draft=false
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Update Repository
       uses: convictional/trigger-workflow-and-wait@v1.6.5
