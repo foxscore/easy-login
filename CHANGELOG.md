@@ -1,76 +1,26 @@
 # Changelog
 
-## [1.0.6-beta.6] - 2026-02-07
-
-### CHANGED
-
-- Sipping `adamreeve/semver.net` source code instead of `SemanticVersioning.dll` to resolve incompatabiility issues with other packages
-- Now displaying an "Update complete" dialog when the self-update finishes
-
-### FIXED
-
-- Fixed a future incompatability issue (see commit message `262219e45d` for more details)
-
-## [1.0.6-beta.5] - 2026-01-22
+## [1.0.6] - 2026-02-22
 
 ### Added
-
-- Verifying `zipSHA256` hash of update before installation
+- Added automatic update detection and a self-update option
 - Added Discord and GitHub links to the settings page
-
-### CHANGED
-
-- Allowing the user to hide a given MOTD permanently
-- Storing MOTD cache in the project's `Temp` directory instead of `%localappdata%` 
-
-## [1.0.6-beta.4] - 2026-01-21
-
-### ADDED
-
-- Storing logs on disk
-
-### CHANGED
-
-- Improved logging system
-- Completed self update system
-
-## [1.0.6-beta.3] - 2026-01-19
-
-### ADDED
-
-- Added automatic update detection
-- Added additional MOTD filters
+- Added MOTDs
 - Made settings read-only if it's a newer version than what we can handle
 
-### CHANGED
+### Changed
+- Slightly improved logging system, with logs now stored on disk
 
-- Loading and storing MOTD on disk
-
-### REMOVED
-
-- Removed the `motd.json` file from zip builds
-
-## [1.0.6-beta.2] - 2026-01-19
-
-### FIXED
-
+### Fixed
+- Updated to a newer version of the `foxscore/make-unitypackage` action. The old version was working correctly.
+- Switched to `Harmony.AccessTools` for reflection in the `AccountWindowGUIHook` static-constructor, due to incompatibility issues with VRC-SDK `3.10.2-beta.1`
 - Fixed an issue where the config / credentials file would reset due to a race condition
+- Fixed "Add to VCC" button in `README.md`
+- Fixed an error where if the `Rounded Radius` for profile-pictures was set to a very low value, we would make the entire icon (partially) invisible
+- Fixed us generating the profile-picture masks every single frame instead of caching them, leading to a memory leak due to how the Unity Editor handles temporary Texture2D instances
 
-## [1.0.6-beta.1] - 2025-12-29
-
-### ADDED
-
-- Added MOTDs that can be published via the main branch of this packages repository.
-
-### FIXED
-
-- Fixed "Add to VCC" button in `README.md`. It does no longer open the image in a new tab, instead of opening the intended link.
-- Fixed an error where if the `Rounded Radius` for profile-pictures was set to a very low value, we would make the entire icon (partially) invisible.
-- Fixed us generating the profile-picture masks every single frame instead of caching them, leading to a memory leak due to how the Unity Editor handles temporary Texture2D instances.
-
-### CHANGED
-
-- Updated to a newer version of the `foxscore/make-unitypackage` action. The old version was not working correctly.
+### Removed
+- Removed the `motd.json` file from zip builds
 
 ## [1.0.5] - 2025-09-11
 

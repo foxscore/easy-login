@@ -1,20 +1,8 @@
 [
   {
-    "id": "032eadca-eb12-4c3c-901c-867a96e3c306",
-    "message": "<size=16><b>Feedback wanted</b></size>\nPlease provide any feedback you might have via email, Discord, or the GitHub page.\n<color=grey>Version 1.0.6-beta.7 will be promoted to the full 1.0.6 release, provided no more bugs are submitted within the next few days.</color>",
-    "allow_hiding": true,
-    "versionRange": ">1.0.6-beta.3 <1.0.6"
-  },
-  {
-    "id": "fbe2e21c-e514-4d26-8e03-0658b5e6ed2f",
-    "message": "<size=16><b>Beta 7 is out</b></size>\nThis update resolves compatability issues with the <b>VRChat SDK Base</b> package, version <color=cyan>3.10.2</color> <color=yellow>Beta 1</color> and up.",
+    "id": "82c57dae-eb7e-460d-b59a-d2cc9483e08d",
+    "message": "<size=16><b>1.0.6 is out of beta</b></size>\nAnd a big thanks to everyone who's given me feedback, bug reports, and great ideas on how to improve Easy Login!",
     "allow_hiding": false,
-    "versionRange": "<1.0.6-beta.7"
-  },
-  {
-    "id": "465aa0de-a3af-43e4-b776-a023e0b50c91",
-    "message": "I've been made aware of an import issue that occurs due to shipping the `SematicVersioning.dll` file with Easy Login.\nA fix for this has been shipped.",
-    "allow_hiding": true,
-    "versionRange": ">=1.0.6-beta.3 <1.0.6-beta.6"
+    "versionRange": "<1.0.6"
   }
 ]
