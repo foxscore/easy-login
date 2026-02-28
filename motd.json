@@ -1,8 +1,8 @@
 [
   {
     "id": "82c57dae-eb7e-460d-b59a-d2cc9483e08d",
-    "message": "<size=16><b>1.0.6 is out of beta</b></size>\nAnd a big thanks to everyone who's given me feedback, bug reports, and great ideas on how to improve Easy Login!",
+    "message": "<size=16><b>1.1.0 is out of beta</b></size>\nAnd a big thanks to everyone who's given me feedback, bug reports, and great ideas on how to improve Easy Login!",
     "allow_hiding": false,
-    "versionRange": "<1.0.6"
+    "versionRange": "<1.1.0"
   }
 ]

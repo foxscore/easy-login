@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.6] - 2026-02-22
+## [1.1.0] - 2026-02-28
 
 ### Added
 - Added automatic update detection and a self-update option
