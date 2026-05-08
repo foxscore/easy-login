@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.1-beta.1] - 2026-05-08
+
+### Added
+- Added `Is.FirstRun()` detection system for initialization functions
+
 ## [1.1.0] - 2026-02-28
 
 ### Added
