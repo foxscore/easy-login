@@ -24,7 +24,10 @@ namespace Foxscore.EasyLogin.Hooks
 
         static AccountWindowGUIHook()
         {
-            if (!PlatformUtils.IsPlatformSupported())
+            if (
+                !Is.FirstRun() ||
+                !PlatformUtils.IsPlatformSupported()
+            )
                 return;
             
             OnAuthenticationVerifiedActionFieldInfo = typeof(VRCSdkControlPanel)

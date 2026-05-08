@@ -38,6 +38,8 @@ namespace Foxscore.EasyLogin.Services
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
+            if (!Is.FirstRun()) return;
+
             var rawPreviousLastUpdate = SessionState.GetString("EasyLogin::updateCheck::LastUpdate", null);
             if (!string.IsNullOrWhiteSpace(rawPreviousLastUpdate))
             {

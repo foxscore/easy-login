@@ -36,6 +36,8 @@ namespace Foxscore.EasyLogin.Services
         [InitializeOnLoadMethod]
         private static void StartSyncService()
         {
+            if (!Is.FirstRun()) return;
+
             var elDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Fox_score", "EasyLogin");
             var hiddenMessagesPath = Path.Combine(elDir, "hidden_messages.json");

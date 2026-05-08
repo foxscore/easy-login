@@ -11,7 +11,10 @@ namespace Foxscore.EasyLogin.Hooks
     {
         static CookieHook()
         {
-            if (!PlatformUtils.IsPlatformSupported())
+            if (
+                !Is.FirstRun() ||
+                !PlatformUtils.IsPlatformSupported()
+            )
                 return;
             
             var method = typeof(Cookie).GetMethod("Parse", BindingFlags.Public | BindingFlags.Static);

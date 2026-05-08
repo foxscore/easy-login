@@ -96,6 +96,8 @@ namespace Foxscore.EasyLogin
 
         static Config()
         {
+            if (!Is.FirstRun()) return;
+
             var elDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Fox_score", "EasyLogin");
             var configPath = Path.Combine(elDir, "config.json");
