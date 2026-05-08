@@ -157,8 +157,12 @@ namespace Foxscore.EasyLogin.Services
                 foreach (var version in versions)
                 {
                     var semVer = Version.Parse(version);
-                    if (!shouldRespectPreReleases && semVer.IsPreRelease)
-                        continue;
+                    if (semVer.IsPreRelease && !shouldRespectPreReleases)
+                    {
+                        // Always include pre-releases of the same base version when currently on a pre-release
+                        if (!currentSemVer.IsPreRelease || semVer.BaseVersion() != currentSemVer.BaseVersion())
+                            continue;
+                    }
                     if (latestVersion == null || semVer > latestVersion)
                         latestVersion = semVer;
                 }

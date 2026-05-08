@@ -7,6 +7,7 @@
 
 ### Fixed
 - Fixed update check crashing when VCC is not installed and the installed version is stable
+- Fixed update check ignoring pre-releases of the same base version when VCC has pre-releases disabled
 - Fixed 2FA credentials not being fully deleted when removing an account on Windows
 - Fixed auth session state being shared across instances
 
