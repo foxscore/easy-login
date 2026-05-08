@@ -5,6 +5,11 @@
 ### Added
 - Added `Is.FirstRun()` detection system for initialization functions
 
+### Fixed
+- Fixed update check crashing when VCC is not installed and the installed version is stable
+- Fixed 2FA credentials not being fully deleted when removing an account on Windows
+- Fixed auth session state being shared across instances
+
 ## [1.1.0] - 2026-02-28
 
 ### Added

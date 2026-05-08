@@ -114,7 +114,7 @@ namespace Foxscore.EasyLogin.KeyringManagers
                 
                 var twoFactorCred = new Credential
                 {
-                    Target = $"{ServiceName}:{id}:2fa:2",
+                    Target = $"{ServiceName}:{id}:2fa:{i}",
                 };
                 bothDontExist = bothDontExist && !twoFactorCred.Exists();
                 if (twoFactorCred.Exists())

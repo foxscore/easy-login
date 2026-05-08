@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -138,7 +138,7 @@ namespace Foxscore.EasyLogin.Services
                     "settings.json"
                 );
                 var shouldRespectPreReleases = currentSemVer.IsPreRelease;
-                if (!shouldRespectPreReleases || File.Exists(configPath))
+                if (File.Exists(configPath))
                 {
                     var fileContents = await File.ReadAllTextAsync(configPath);
                     var config = JsonConvert.DeserializeObject<Abstract.VccConfig>(fileContents);
