@@ -1,6 +1,11 @@
 # Changelog
 
-## [1.1.1-beta.1] - 2026-05-08
+## [1.1.1-beta.3] - 2026-05-10
+
+### Changed
+- Switched update and MOTD service endpoints to redirect URLs to prevent breakage when backend hosts change
+
+## [1.1.1-beta.2] - 2026-05-08
 
 ### Added
 - Added `Is.FirstRun()` detection system for initialization functions
