@@ -1,20 +1,18 @@
 # Changelog
 
-## [1.1.1-beta.3] - 2026-05-10
+## [1.1.1] - 2026-05-10
 
 ### Changed
-- Switched update and MOTD service endpoints to redirect URLs to prevent breakage when backend hosts change
-
-## [1.1.1-beta.2] - 2026-05-08
+- update and MOTD service endpoints to redirect URLs to prevent breakage when backend hosts change
 
 ### Added
-- Added `Is.FirstRun()` detection system for initialization functions
+- `Is.FirstRun()` detection system for initialization functions
 
 ### Fixed
-- Fixed update check crashing when VCC is not installed and the installed version is stable
-- Fixed update check ignoring pre-releases of the same base version when VCC has pre-releases disabled
-- Fixed 2FA credentials not being fully deleted when removing an account on Windows
-- Fixed auth session state being shared across instances
+- Update check crashing when VCC is not installed and the installed version is stable
+- Update check ignoring pre-releases of the same base version when VCC has pre-releases disabled
+- 2FA credentials not being fully deleted when removing an account on Windows
+- Auth session state being shared across instances
 
 ## [1.1.0] - 2026-02-28
 
