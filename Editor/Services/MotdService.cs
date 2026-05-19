@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -21,7 +21,7 @@ namespace Foxscore.EasyLogin.Services
         private const string Url = "http://localhost:80/motd.json";
         private const double TimeBetweenUpdates = 1; // 1 Second
 #else
-        private const string Url = "https://raw.githubusercontent.com/foxscore/easy-login/refs/heads/main/motd.json";
+        private const string Url = "https://short.foxscore.dev/easy-login-motd";
         private const double TimeBetweenUpdates = 5 * 60; // 5 Minutes
 #endif
         private static double _lastUpdate = -100 - TimeBetweenUpdates; // * Default value must be low enough to trigger an update on startup 
@@ -36,6 +36,8 @@ namespace Foxscore.EasyLogin.Services
         [InitializeOnLoadMethod]
         private static void StartSyncService()
         {
+            if (!Is.FirstRun()) return;
+
             var elDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Fox_score", "EasyLogin");
             var hiddenMessagesPath = Path.Combine(elDir, "hidden_messages.json");

@@ -26,7 +26,8 @@ namespace Foxscore.EasyLogin
         private string _password;
         private string _2faCode;
         private bool _wereCredentialsOr2AuthInvalid;
-        private static State _state = State.EnterCredentials;
+        // ReSharper disable once MemberInitializerValueIgnored
+        private State _state = State.EnterCredentials;
         private TwoFactorType _2FaType = TwoFactorType.None;
         private string _authToken;
 

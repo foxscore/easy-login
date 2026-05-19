@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -25,7 +25,7 @@ namespace Foxscore.EasyLogin.Services
     
     public static class UpdateService
     {
-        private const string IndexUrl = "https://foxscore.dev/vpm/index.json";
+        private const string IndexUrl = "https://short.foxscore.dev/easy-login-vpm-index-json";
         private const double TimeBetweenUpdates = 15 * 60; // 15 Minutes
         
         private static double _lastUpdate = -100 - TimeBetweenUpdates; // * Default value must be low enough to trigger an update on startup
@@ -38,6 +38,8 @@ namespace Foxscore.EasyLogin.Services
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
+            if (!Is.FirstRun()) return;
+
             var rawPreviousLastUpdate = SessionState.GetString("EasyLogin::updateCheck::LastUpdate", null);
             if (!string.IsNullOrWhiteSpace(rawPreviousLastUpdate))
             {
@@ -136,7 +138,7 @@ namespace Foxscore.EasyLogin.Services
                     "settings.json"
                 );
                 var shouldRespectPreReleases = currentSemVer.IsPreRelease;
-                if (!shouldRespectPreReleases || File.Exists(configPath))
+                if (File.Exists(configPath))
                 {
                     var fileContents = await File.ReadAllTextAsync(configPath);
                     var config = JsonConvert.DeserializeObject<Abstract.VccConfig>(fileContents);
@@ -155,8 +157,12 @@ namespace Foxscore.EasyLogin.Services
                 foreach (var version in versions)
                 {
                     var semVer = Version.Parse(version);
-                    if (!shouldRespectPreReleases && semVer.IsPreRelease)
-                        continue;
+                    if (semVer.IsPreRelease && !shouldRespectPreReleases)
+                    {
+                        // Always include pre-releases of the same base version when currently on a pre-release
+                        if (!currentSemVer.IsPreRelease || semVer.BaseVersion() != currentSemVer.BaseVersion())
+                            continue;
+                    }
                     if (latestVersion == null || semVer > latestVersion)
                         latestVersion = semVer;
                 }

@@ -24,6 +24,8 @@ namespace Foxscore.EasyLogin
 
         private static void InitializeLogFile()
         {
+            if (!Is.FirstRun()) return;
+
             var logsDir = Path.Combine(Application.dataPath, "..", "Logs");
             if (!Directory.Exists(logsDir))
                 Directory.CreateDirectory(logsDir);

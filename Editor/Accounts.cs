@@ -111,7 +111,10 @@ namespace Foxscore.EasyLogin
 
         static Accounts()
         {
-            if (!PlatformUtils.IsPlatformSupported())
+            if (
+                !Is.FirstRun() ||
+                !PlatformUtils.IsPlatformSupported()
+            )
                 return;
 
             if (!Config.Enabled)
