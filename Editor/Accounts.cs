@@ -2,8 +2,10 @@
 using System.Linq;
 using System.Reflection;
 using Foxscore.EasyLogin.KeyringManagers;
+using Foxscore.EasyLogin.Extensions;
 using UnityEditor;
 using VRC.Core;
+using Newtonsoft.Json.Linq;
 
 // ReSharper disable once CheckNamespace
 namespace Foxscore.EasyLogin
@@ -19,6 +21,18 @@ namespace Foxscore.EasyLogin
     [InitializeOnLoad]
     public static class Accounts
     {
+        private static string GetUserIcon(ApiContainer container)
+        {
+        try
+        {
+            return JObject.Parse(container.Text).TryGetPropertyValue("userIcon", out string iconUrl) ? iconUrl : null;
+        }
+        catch (Exception e)
+        {
+            Log.Debug("Failed to read userIcon from the current user response", e);
+            return null;
+        }
+        }
         private const string KeystoreDllPathWindows =
             "Packages/dev.foxscore.easy-login/Managed/Windows/CredentialManagement.dll";
 
@@ -63,7 +77,7 @@ namespace Foxscore.EasyLogin
                     var apiUser = user.Model as APIUser;
 
                     var displayName = apiUser!.displayName;
-                    var iconUrl = apiUser!.userIcon;
+                    var iconUrl = GetUserIcon(user);
                     if (string.IsNullOrEmpty(iconUrl)) iconUrl = apiUser.currentAvatarImageUrl;
                     
                     if (displayName != account.DisplayName || account.ProfilePictureUrl != iconUrl)
