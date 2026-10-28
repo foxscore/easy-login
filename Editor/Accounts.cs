@@ -39,8 +39,8 @@ namespace Foxscore.EasyLogin
             const string errorName = "ERROR_NO_DISPLAY_NAME"; 
             try
             {
-                string? name = null;
-                string? icon = null;
+                string name = null;
+                string icon = null;
 
                 if (!user.TryGetValue("displayName", out var token))
                     name = errorName;

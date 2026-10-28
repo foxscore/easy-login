@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.2-beta.2] - 2026-10-28
+
+### Fixed
+- Fixed `#nullable` warnings
+
 ## [1.1.2-beta.1] - 2026-10-28
 
 ### Fixed
