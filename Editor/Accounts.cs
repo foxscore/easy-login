@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using BestHTTP.JSON;
 using Foxscore.EasyLogin.KeyringManagers;
 using UnityEditor;
 using VRC.Core;
@@ -31,7 +33,37 @@ namespace Foxscore.EasyLogin
         public static AccountStruct CurrentAccount { get; private set; }
         public static bool? CanCurrentAccountPublishAvatars { get; private set; }
         public static bool? CanCurrentAccountPublishWorlds { get; private set; }
+        
+        private static (string displayName, string? iconUrl) SafeGetUserMeta(IReadOnlyDictionary<string, BestHTTP.JSON.Json.Token> user)
+        {
+            const string errorName = "ERROR_NO_DISPLAY_NAME"; 
+            try
+            {
+                string? name = null;
+                string? icon = null;
 
+                if (!user.TryGetValue("displayName", out var token))
+                    name = errorName;
+                if (token.Type == Json.TokenType.String)
+                    name = token.Value as string;
+
+                if (!user.TryGetValue("iconUrl", out token))
+                    user.TryGetValue("currentAvatarImageUrl", out token);
+                if (token.Type == Json.TokenType.String)
+                    icon = token.Value as string;
+
+                if (string.IsNullOrWhiteSpace(icon))
+                    icon = null;
+                
+                return (name, icon);
+            }
+            catch (Exception e)
+            {
+                Log.Error("Failed to parse user metadata after login", e);
+                return (errorName, null);
+            }
+        }
+        
         public static void SetCurrentAccount(AccountStruct account)
         {
             if (account == null)
@@ -60,12 +92,7 @@ namespace Foxscore.EasyLogin
                 APIUser.InitialFetchCurrentUser(user =>
                 {
                     // Update profile icon
-                    var apiUser = user.Model as APIUser;
-
-                    var displayName = apiUser!.displayName;
-                    var iconUrl = apiUser!.userIcon;
-                    if (string.IsNullOrEmpty(iconUrl)) iconUrl = apiUser.currentAvatarImageUrl;
-                    
+                    var (displayName, iconUrl) = SafeGetUserMeta(user.ResponseDictionary);
                     if (displayName != account.DisplayName || account.ProfilePictureUrl != iconUrl)
                     {
                         account.DisplayName = displayName;

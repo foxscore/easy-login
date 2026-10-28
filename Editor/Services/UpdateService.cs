@@ -25,6 +25,14 @@ namespace Foxscore.EasyLogin.Services
     
     public static class UpdateService
     {
+#if FOXY_DEBUG
+        [MenuItem("Debug/Clear Session State/Update Service")]
+        private static void ClearSessionState()
+        {
+            SessionState.EraseString("EasyLogin::updateCheck::LastUpdate");
+        }
+#endif
+        
         private const string IndexUrl = "https://short.foxscore.dev/easy-login-vpm-index-json";
         private const double TimeBetweenUpdates = 15 * 60; // 15 Minutes
         
@@ -203,6 +211,11 @@ namespace Foxscore.EasyLogin.Services
             {
                 LastUpdateCheckResult = result.Value;
                 SaveStateToDisk();
+
+                if (result.Value.IsUpdateAvailable)
+                {
+                    VRCSdkControlPanel.window?.Repaint();
+                }
             }
 
             _lastUpdate = EditorApplication.timeSinceStartup;

@@ -17,13 +17,8 @@ namespace Foxscore.EasyLogin.Services
 {
     public static class MotdService
     {
-#if FOXY_USE_LOCAL_MOTD
-        private const string Url = "http://localhost:80/motd.json";
-        private const double TimeBetweenUpdates = 1; // 1 Second
-#else
         private const string Url = "https://short.foxscore.dev/easy-login-motd";
         private const double TimeBetweenUpdates = 5 * 60; // 5 Minutes
-#endif
         private static double _lastUpdate = -100 - TimeBetweenUpdates; // * Default value must be low enough to trigger an update on startup 
         private static SafeFileHandler _cacheFileHandler;
 
@@ -128,9 +123,13 @@ namespace Foxscore.EasyLogin.Services
         {
             try
             {
+#if FOXY_USE_LOCAL_MOTD
+                var rawJson = await File.ReadAllTextAsync("Packages/dev.foxscore.easy-login/motd.json");
+#else
                 using var client = new HttpClient();
                 client.SetEasyLoginUserAgent();
                 var rawJson = await client.GetStringAsync(Url);
+#endif
                 var messages = JsonConvert.DeserializeObject<MotdMessage[]>(rawJson);
                 UpdateData(messages);
                 WriteCache();

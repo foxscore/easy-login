@@ -1,9 +1,17 @@
 # Changelog
 
+## [1.1.2-beta.1] - 2026-10-28
+
+### Fixed
+- Issues due to API changes
+
+### Changed
+- Repainting VRChat SDK window when an available update is detected
+
 ## [1.1.1] - 2026-05-10
 
 ### Changed
-- update and MOTD service endpoints to redirect URLs to prevent breakage when backend hosts change
+- Update and MOTD service endpoints to redirect URLs to prevent breakage when backend hosts change
 
 ### Added
 - `Is.FirstRun()` detection system for initialization functions

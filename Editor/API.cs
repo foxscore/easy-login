@@ -232,7 +232,7 @@ namespace Foxscore.EasyLogin
                         }
 
                         // Get the profile image
-                        if (jObject.TryGetPropertyValue("userIcon", out string profilePictureUrl))
+                        if (jObject.TryGetPropertyValue("iconUrl", out string profilePictureUrl))
                         {
                             if (string.IsNullOrWhiteSpace(profilePictureUrl))
                                 profilePictureUrl = null;
