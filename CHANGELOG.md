@@ -1,11 +1,6 @@
 # Changelog
 
-## [1.1.2-beta.2] - 2026-10-28
-
-### Fixed
-- Fixed `#nullable` warnings
-
-## [1.1.2-beta.1] - 2026-10-28
+## [1.1.2] - 2026-10-31
 
 ### Fixed
 - Issues due to API changes

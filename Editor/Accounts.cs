@@ -34,7 +34,7 @@ namespace Foxscore.EasyLogin
         public static bool? CanCurrentAccountPublishAvatars { get; private set; }
         public static bool? CanCurrentAccountPublishWorlds { get; private set; }
         
-        private static (string displayName, string? iconUrl) SafeGetUserMeta(IReadOnlyDictionary<string, BestHTTP.JSON.Json.Token> user)
+        private static (string displayName, string iconUrl) SafeGetUserMeta(IReadOnlyDictionary<string, BestHTTP.JSON.Json.Token> user)
         {
             const string errorName = "ERROR_NO_DISPLAY_NAME"; 
             try
